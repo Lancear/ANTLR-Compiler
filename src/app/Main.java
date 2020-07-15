@@ -3,25 +3,33 @@ package app;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import backend.Backend;
-import backend.JVMBackend;
+import targets.JVM;
 import util.HexFormatter;
 
 public class Main {
 
   public static void main(String[] args) {
-    Backend backend = new JVMBackend();
-    byte[] bytecode = backend.generate();
+    JVM target = new JVM();
+
+    String programName = "TestMethodStructure";
+    
+    target.enterProgram(programName);
+    target.enterFunction("main");
+    target.returnVoid();
+    target.exitFunction();
+
+    byte[] bytecode = target.generate();
+
 
     try {
-      Files.write(Paths.get("./output/Test1.class"), bytecode);
+      Files.write(Paths.get("./output/" + programName + ".class"), bytecode);
     } 
     catch (Exception ex) {
       ex.printStackTrace();
     }
 
     System.out.println();
-    System.out.println("--- Test1 ---------------");
+    System.out.println("--- " + programName + " ---------------");
     System.out.println( HexFormatter.toHexString(bytecode) );
   }
 

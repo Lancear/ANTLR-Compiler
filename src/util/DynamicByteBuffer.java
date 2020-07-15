@@ -331,6 +331,13 @@ public class DynamicByteBuffer implements DataOutput {
    * @see     java.io.ByteArrayOutputStream#count
    */
   public synchronized int size() {
+    try {
+      data.flush();
+    }
+    catch (IOException ex) {
+      throw new IllegalStateException(IOExceptionMessage, ex);
+    }
+    
     return out.size();
   }
 

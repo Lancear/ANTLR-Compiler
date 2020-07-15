@@ -1,5 +1,7 @@
 package targets;
 
+import java.util.HashMap;
+
 import util.DynamicByteBuffer;
 
 public class JVM {
@@ -16,19 +18,30 @@ public class JVM {
     public final static short CLASS_TAG = 0x07;
   }
 
+
   // Code Generation Working Variables //
-  private short thisClass = 0;
-  private short superClass = 0;
+  private short thisClass;
+  private short superClass;
+  private short codeAttributeNameIdx;
+
   private DynamicByteBuffer constants;
-  private short nrOfConstants = 0;
+  private short nrOfConstants;
+
   private DynamicByteBuffer methods;
-  private short nrOfMethods = 0;
+  private short nrOfMethods;
+
+  private DynamicByteBuffer code;
+  private short stackSize;
+  private short localsSize;
+  
 
 
   public JVM() {
     this.constants = new DynamicByteBuffer();
+    this.nrOfConstants = 0;
+
     this.methods = new DynamicByteBuffer();
-    enterProgram("Test1");
+    this.nrOfMethods = 0;
   }
 
 
@@ -49,7 +62,10 @@ public class JVM {
 
     bytecode.writeShort(0); // interfaces
     bytecode.writeShort(0); // fields
-    bytecode.writeShort(0); // methods
+    
+    bytecode.writeShort(nrOfMethods);
+    bytecode.write(methods.toByteArray());
+
     bytecode.writeShort(0); // attributes
     
     return bytecode.toByteArray();
@@ -57,34 +73,82 @@ public class JVM {
   
 
   // Structure //
-  public void enterProgram(String programName) {
-    // set the class name & descriptor
+  public void enterProgram(String name) {
+    // class name & descriptor
     constants.writeByte(CONSTANT_POOL.UTF8_TAG);
-    constants.writeUTF(programName);
-    int classNameIdx = ++nrOfConstants;
+    constants.writeUTF(name);
+    short classNameIdx = ++nrOfConstants;
     constants.writeByte(CONSTANT_POOL.CLASS_TAG);
     constants.writeShort(classNameIdx);
     this.thisClass = ++nrOfConstants;
 
-    // set the super name & descriptor
-    String objectClassName = Object.class.getCanonicalName().replaceAll("[.]", "/");
+    // super name & descriptor
+    String objectClassName = binaryClassnameOf(Object.class);
     constants.writeByte(CONSTANT_POOL.UTF8_TAG);
     constants.writeUTF(objectClassName);
-    int superNameIdx = ++nrOfConstants;
+    short superNameIdx = ++nrOfConstants;
     constants.writeByte(CONSTANT_POOL.CLASS_TAG);
     constants.writeShort(superNameIdx);
     this.superClass = ++nrOfConstants;
+
+    // code attribute name
+    constants.writeByte(CONSTANT_POOL.UTF8_TAG);
+    constants.writeUTF("Code");
+    this.codeAttributeNameIdx = ++nrOfConstants;
   }
 
   public void enterFunction(String name) {
+    final short accessFlags = 0x0001 | 0x0008; // public + static
 
+    // method name
+    constants.writeByte(CONSTANT_POOL.UTF8_TAG);
+    constants.writeUTF(name);
+    short nameIdx = ++nrOfConstants;
+
+    // method descriptor
+    String descriptor = "([L"+ binaryClassnameOf(String.class) + ";)V";
+    constants.writeByte(CONSTANT_POOL.UTF8_TAG);
+    constants.writeUTF(descriptor);
+    short descriptorIdx = ++nrOfConstants;
+
+    // method structure
+    methods.writeShort(accessFlags);
+    methods.writeShort(nameIdx);
+    methods.writeShort(descriptorIdx);
+    // attributes are added at exitFunction
+
+    this.nrOfMethods++;
+    this.code = new DynamicByteBuffer();
+    this.stackSize = 0;
+    this.localsSize = 1; // string[] arg
   }
 
-  public void exitFunction(String name) {
-
+  public void exitFunction() {
+    methods.writeShort(1); // 1 attribute: (Code)
+    
+    // code attribute
+    methods.writeShort(codeAttributeNameIdx);
+    // code size + 2B stack size + 2B local size + 4B code size 
+    // + 2B exception table size + 2B attributes table count + attributes table size
+    methods.writeInt(code.size() + 12);
+    methods.writeShort(stackSize);
+    methods.writeShort(localsSize);
+    methods.writeInt(code.size());
+    methods.write(code.toByteArray());
+    methods.writeShort(0); // exception table size
+    methods.writeShort(0); // attributes table count
   }
 
 
   // Instructions //
-  
+  public void returnVoid() {
+    final byte opcode = (byte)0xb1;
+    code.writeByte(opcode);
+  }
+
+
+  // Helpers //
+  private String binaryClassnameOf(Class c) {
+    return c.getCanonicalName().replaceAll("[.]", "/");
+  }
 }
