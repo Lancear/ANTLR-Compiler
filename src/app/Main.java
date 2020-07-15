@@ -12,9 +12,9 @@ public class Main {
     JVM target = new JVM();
 
     String programName = "TestMethodStructure";
-    
+
     target.enterProgram(programName);
-    target.enterFunction("main");
+    target.enterFunction("main", "([L"+ target.binaryClassnameOf(String.class) + ";)V");
     target.returnVoid();
     target.exitFunction();
 
@@ -31,6 +31,7 @@ public class Main {
     System.out.println();
     System.out.println("--- " + programName + " ---------------");
     System.out.println( HexFormatter.toHexString(bytecode) );
+    System.out.println("(" + bytecode.length + " Bytes)");
   }
 
 }
