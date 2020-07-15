@@ -14,7 +14,7 @@ public class Main {
     byte[] bytecode = backend.generate();
 
     try {
-      Files.write(Paths.get("./results/Test1.class"), bytecode);
+      Files.write(Paths.get("./output/Test1.class"), bytecode);
     } 
     catch (Exception ex) {
       ex.printStackTrace();
