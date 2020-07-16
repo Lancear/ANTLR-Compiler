@@ -11,6 +11,7 @@ public class JVM {
   private final static int majorVersion = 58;
   private final static int minorVersion = 0;
   private final static int accessFlags = 0x0001 | 0x0020; // public + super (super is always set since Java 8)
+  private final static int branchPlaceholder = 0xdead;
 
   // CONSTANT POOL //
   private static class CONSTANT_POOL {
@@ -50,6 +51,10 @@ public class JVM {
   private int maxStackSize;
   private int localsSize;
   private int maxLocalsSize;
+
+  private HashMap<Integer, String> labels;
+  private HashMap<String, Integer> addresses;
+  private HashMap<Integer, String> methodDescriptors;
   
 
   public JVM() {
@@ -66,6 +71,8 @@ public class JVM {
 
     this.innerClasses = new DynamicByteBuffer();
     this.nrOfInnerClasses = 0;
+
+    this.methodDescriptors = new HashMap<>();
   }
 
 
@@ -138,6 +145,8 @@ public class JVM {
     this.maxStackSize = this.stackSize;
     this.localsSize = 1; // string[] arg
     this.maxLocalsSize = this.localsSize;
+    this.labels = new HashMap<>();
+    this.addresses = new HashMap<>();
   }
 
   public void exitMethod() {
@@ -151,7 +160,7 @@ public class JVM {
     methods.writeShort(maxStackSize);
     methods.writeShort(maxLocalsSize);
     methods.writeInt(code.size());
-    methods.write(code.toByteArray());
+    methods.write( backpatch( code.toByteArray() ) );
     methods.writeShort(0); // exception table size
     methods.writeShort(0); // attributes table count
   }
@@ -180,6 +189,25 @@ public class JVM {
     innerClasses.writeShort( addUtf8ToConstantPool(name) );
     innerClasses.writeShort(accessFlags);
     nrOfInnerClasses++;
+  }
+
+  public void addLabel(String label) {
+    addresses.put(label, code.size());
+  }
+
+  public byte[] backpatch(byte[] bytecode) {
+    for (int jump : labels.keySet()) {
+      String label = labels.get(jump);
+
+      if (!addresses.containsKey(label)) 
+        throw new IllegalStateException("Unresolved label: '" + label + "'");
+
+      int address = addresses.get(label) - jump;
+      bytecode[jump + 1] = (byte)(address >> 8 & 0xff);
+      bytecode[jump + 2] = (byte)(address & 0xff);
+    }
+
+    return bytecode;
   }
 
 
@@ -292,6 +320,7 @@ public class JVM {
     int constIdx = ++nrOfConstants;
 
     methodRefConstants.put(methodRef, constIdx);
+    methodDescriptors.put(constIdx, methodType);
     return constIdx;
   }
 
@@ -651,7 +680,156 @@ public class JVM {
     code.writeByte(opcode);
   }
 
+  // Comparison //
+  public void ifeq(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0x99;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize--;
+  }
+
+  public void ifne(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0x9a;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize--;
+  }
+
+  public void iflt(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0x9b;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize--;
+  }
+
+  public void ifge(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0x9c;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize--;
+  }
+
+  public void ifgt(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0x9d;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize--;
+  }
+
+  public void ifle(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0x9e;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize--;
+  }
+
+  public void if_icmpeq(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0x9f;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize -= 2;
+  }
+
+  public void if_icmpne(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0xa0;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize -= 2;
+  }
+
+  public void if_icmplt(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0xa1;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize -= 2;
+  }
+
+  public void if_icmpge(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0xa2;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize -= 2;
+  }
+
+  public void if_icmpgt(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0xa3;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize -= 2;
+  }
+
+  public void if_icmple(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0xa4;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize -= 2;
+  }
+
+  public void if_acmpeq(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0xa5;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize -= 2;
+  }
+
+  public void if_acmpne(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0xa6;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+
+    stackSize -= 2;
+  }
+
   // Control //
+  public void gotoLabel(String label) {
+    labels.put(code.size(), label);
+
+    final int opcode = 0xa7;
+    code.writeByte(opcode);
+    code.writeShort(branchPlaceholder); 
+  }
+
   public void returnVoid() {
     final int opcode = 0xb1;
     code.writeByte(opcode);
@@ -709,7 +887,9 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    // TODO: calculate stack change
+    int stackChange = stackChangeFor(idx) - 1;
+    stackSize += stackChange;
+    if (stackSize > maxStackSize) maxStackSize = stackChange;
   }
 
   public void invokeStatic(int idx) {
@@ -717,7 +897,9 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    // TODO: calculate stack change
+    int stackChange = stackChangeFor(idx);
+    stackSize += stackChange;
+    if (stackSize > maxStackSize) maxStackSize = stackChange;
   }
 
   public void anew(int idx) {
@@ -792,6 +974,38 @@ public class JVM {
   private void incStackSize() {
     stackSize++;
     if (stackSize > maxStackSize) maxStackSize = stackSize;
+  }
+
+  private int stackChangeFor(int methodIdx) {
+    if (!methodDescriptors.containsKey(methodIdx))
+      throw new IllegalStateException("Method with index " + methodIdx + " not found in the constant pool!");
+
+    String methodDescriptor = methodDescriptors.get(methodIdx);
+    if (!methodDescriptor.startsWith("("))
+      throw new IllegalStateException("Missing parameter list for method at index " + methodIdx + "!");
+
+    int params = 0;
+    boolean returnsVoid = methodDescriptor.endsWith(")V");
+
+    int idx = 1;
+    boolean objectType = false;
+
+    while (methodDescriptor.charAt(idx) != ')') {
+      char c = methodDescriptor.charAt(idx);
+
+      if (!objectType) {
+        objectType = (c == 'L');
+        params++;
+      }
+
+      objectType = !(objectType && c == ';');
+      idx++;
+
+      if (idx > methodDescriptor.length())
+        throw new IllegalStateException("End of parameter list not found for method at index " + methodIdx + "!");
+    }
+
+    return (returnsVoid) ? -params : 1 - params;
   }
 
 }
