@@ -15,7 +15,12 @@ public class JVM {
   // CONSTANT POOL //
   private static class CONSTANT_POOL {
     public final static int UTF8_TAG = 0x01;
+    public final static int INTEGER_TAG = 0x03;
     public final static int CLASS_TAG = 0x07;
+    public final static int STRING_TAG = 0x08;
+    public final static int FIELDREF_TAG = 0x09;
+    public final static int METHODREF_TAG = 0x0a;
+    public final static int NAMEANDTYPE_TAG = 0x0c;
   }
 
   // ARRAY TYPE //
@@ -34,6 +39,12 @@ public class JVM {
   private DynamicByteBuffer methods;
   private int nrOfMethods;
 
+  private DynamicByteBuffer fields;
+  private int nrOfFields;
+
+  private DynamicByteBuffer innerClasses;
+  private int nrOfInnerClasses;
+
   private DynamicByteBuffer code;
   private int stackSize;
   private int maxStackSize;
@@ -49,16 +60,23 @@ public class JVM {
 
     this.methods = new DynamicByteBuffer();
     this.nrOfMethods = 0;
+
+    this.fields = new DynamicByteBuffer();
+    this.nrOfFields = 0;
+
+    this.innerClasses = new DynamicByteBuffer();
+    this.nrOfInnerClasses = 0;
   }
 
 
   public byte[] generate() {
     DynamicByteBuffer bytecode = new DynamicByteBuffer();
 
+    // Last Minute ConstantPool Entries //
     int classIdx = addClassToConstantPool(className);
-    String superClassName = binaryClassnameOf(Object.class);
+    String superClassName = binaryClassNameOf(Object.class);
     int superIdx = addClassToConstantPool(superClassName);
-
+    if (nrOfInnerClasses != 0) addUtf8ToConstantPool("InnerClasses");
 
     bytecode.writeInt(MAGIC_NUMBER);
     bytecode.writeShort(minorVersion);
@@ -66,30 +84,42 @@ public class JVM {
 
     // the constant_pool_count item is equal to the number of entries in the constant_pool table plus one
     bytecode.writeShort(nrOfConstants + 1);
-    bytecode.write(constants.toByteArray());
+    bytecode.write( constants.toByteArray() );
 
     bytecode.writeShort(accessFlags);
     bytecode.writeShort(classIdx);
     bytecode.writeShort(superIdx);
 
     bytecode.writeShort(0); // interfaces
-    bytecode.writeShort(0); // fields
-    
-    bytecode.writeShort(nrOfMethods);
-    bytecode.write(methods.toByteArray());
 
-    bytecode.writeShort(0); // attributes
-    
+    bytecode.writeShort(nrOfFields);
+    bytecode.write( fields.toByteArray() );
+    bytecode.writeShort(nrOfMethods);
+    bytecode.write( methods.toByteArray() );
+
+    // attributes
+    if (nrOfInnerClasses == 0) {
+      bytecode.writeShort(0);
+    }
+    else {
+      bytecode.writeShort(1);
+      bytecode.writeShort( addUtf8ToConstantPool("InnerClasses") );
+      // innerClassses + 2B number_of_classes
+      bytecode.writeInt( innerClasses.size() + 2 );
+      bytecode.writeShort(nrOfInnerClasses);
+      bytecode.write(innerClasses.toByteArray());
+    }
+
     return bytecode.toByteArray();
   }
   
 
   // Structure //
-  public void enterProgram(String name) {
+  public void enterClass(String name) {
     this.className = name;
   }
 
-  public void enterFunction(String name, String descriptor) {
+  public void enterMethod(String name, String descriptor) {
     final int accessFlags = 0x0001 | 0x0008; // public + static
 
     // method name & descriptor
@@ -110,7 +140,7 @@ public class JVM {
     this.maxLocalsSize = this.localsSize;
   }
 
-  public void exitFunction() {
+  public void exitMethod() {
     methods.writeShort(1); // 1 attribute: (Code)
     
     // code attribute
@@ -126,10 +156,40 @@ public class JVM {
     methods.writeShort(0); // attributes table count
   }
 
+  public void addField(String name, String descriptor, boolean staticFlag) {
+    int accessFlags = 0x0001; // public
+    if (staticFlag) accessFlags |= 0x0008;  // static
+
+    // method name & descriptor
+    int nameIdx = addUtf8ToConstantPool(name);
+    int descriptorIdx = addUtf8ToConstantPool(descriptor);
+
+    // method structure
+    fields.writeShort(accessFlags);
+    fields.writeShort(nameIdx);
+    fields.writeShort(descriptorIdx);
+    fields.writeShort(0); // attributes
+    this.nrOfFields++;
+  }
+
+  public void addInnerClass(String name, String fileName) {
+    final int accessFlags = 0x0001 | 0x0008; // public + static
+
+    innerClasses.writeShort( addClassToConstantPool(fileName) );
+    innerClasses.writeShort( addClassToConstantPool(this.className) );
+    innerClasses.writeShort( addUtf8ToConstantPool(name) );
+    innerClasses.writeShort(accessFlags);
+    nrOfInnerClasses++;
+  }
+
 
   // Constant Pool Helpers //
-  public String binaryClassnameOf(Class<?> c) {
+  public static String binaryClassNameOf(Class<?> c) {
     return c.getCanonicalName().replaceAll("[.]", "/");
+  }
+
+  public static String fieldDescriptorOf(Class<?> c) {
+    return "L" + binaryClassNameOf(c) + ";";
   }
 
   private HashMap<String, Integer> utf8Constants = new HashMap<>();
@@ -144,6 +204,18 @@ public class JVM {
     return constIdx;
   }
 
+  private HashMap<Integer, Integer> integerConstants = new HashMap<>();
+  public int addIntegerToConstantPool(int value) {
+    if (integerConstants.containsKey(value)) return integerConstants.get(value);
+
+    constants.writeByte(CONSTANT_POOL.INTEGER_TAG);
+    constants.writeInt(value);
+    int constIdx = ++nrOfConstants;
+
+    integerConstants.put(value, constIdx);
+    return constIdx;
+  }
+
   private HashMap<String, Integer> classConstants = new HashMap<>();
   public int addClassToConstantPool(String name) {
     if (classConstants.containsKey(name)) return classConstants.get(name);
@@ -155,6 +227,71 @@ public class JVM {
     int constIdx = ++nrOfConstants;
 
     classConstants.put(name, constIdx);
+    return constIdx;
+  }
+
+  private HashMap<String, Integer> stringConstants = new HashMap<>();
+  public int addStringToConstantPool(String value) {
+    if (stringConstants.containsKey(value)) return stringConstants.get(value);
+
+    int stringIdx = addUtf8ToConstantPool(value);
+
+    constants.writeByte(CONSTANT_POOL.STRING_TAG);
+    constants.writeShort(stringIdx);
+    int constIdx = ++nrOfConstants;
+
+    stringConstants.put(value, constIdx);
+    return constIdx;
+  }
+
+  private HashMap<String, Integer> nameAndTypeConstants = new HashMap<>();
+  public int addNameAndTypeToConstantPool(String name, String descriptor) {
+    String nameAndType = name + ":" + descriptor;
+    if (nameAndTypeConstants.containsKey(nameAndType)) return nameAndTypeConstants.get(nameAndType);
+
+    int nameIdx = addUtf8ToConstantPool(name);
+    int descriptorIdx = addUtf8ToConstantPool(descriptor);
+
+    constants.writeByte(CONSTANT_POOL.NAMEANDTYPE_TAG);
+    constants.writeShort(nameIdx);
+    constants.writeShort(descriptorIdx);
+    int constIdx = ++nrOfConstants;
+
+    nameAndTypeConstants.put(nameAndType, constIdx);
+    return constIdx;
+  }
+
+  private HashMap<String, Integer> fieldRefConstants = new HashMap<>();
+  public int addFieldRefToConstantPool(String className, String fieldName, String fieldType) {
+    String fieldRef = className + "." + fieldName + ":" + fieldType;
+    if (fieldRefConstants.containsKey(fieldRef)) return fieldRefConstants.get(fieldRef);
+
+    int classIdx = addClassToConstantPool(className);
+    int nameAndTypeIdx = addNameAndTypeToConstantPool(fieldName, fieldType);
+
+    constants.writeByte(CONSTANT_POOL.FIELDREF_TAG);
+    constants.writeShort(classIdx);
+    constants.writeShort(nameAndTypeIdx);
+    int constIdx = ++nrOfConstants;
+
+    fieldRefConstants.put(fieldRef, constIdx);
+    return constIdx;
+  }
+
+  private HashMap<String, Integer> methodRefConstants = new HashMap<>();
+  public int addMethodRefToConstantPool(String className, String methodName, String methodType) {
+    String methodRef = className + "." + methodName + ":" + methodType;
+    if (methodRefConstants.containsKey(methodRef)) return methodRefConstants.get(methodRef);
+
+    int classIdx = addClassToConstantPool(className);
+    int nameAndTypeIdx = addNameAndTypeToConstantPool(methodName, methodType);
+
+    constants.writeByte(CONSTANT_POOL.METHODREF_TAG);
+    constants.writeShort(classIdx);
+    constants.writeShort(nameAndTypeIdx);
+    int constIdx = ++nrOfConstants;
+
+    methodRefConstants.put(methodRef, constIdx);
     return constIdx;
   }
 
@@ -565,6 +702,14 @@ public class JVM {
     code.writeShort(idx);
 
     stackSize -= 2;
+  }
+
+  public void invokeVirtual(int idx) {
+    final int opcode = 0xb6;
+    code.writeByte(opcode);
+    code.writeShort(idx);
+
+    // TODO: calculate stack change
   }
 
   public void invokeStatic(int idx) {
