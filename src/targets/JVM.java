@@ -1,6 +1,8 @@
 package targets;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Stack;
 
 import util.DynamicByteBuffer;
 
@@ -30,6 +32,28 @@ public class JVM {
     public final static int INT = 10;
   }
 
+  // STACKMAP ENTRY // 
+  private static class StackMapFrame {
+    public final static int FULL_FRAME = 255;
+    public final static class VerificationTypeInfo {
+      public final static int INTEGER = 1;
+      public final static int OBJECT = 7;
+    }
+
+    public int codeOffset;
+    public String[] stack;
+    public String[] locals;
+
+    public StackMapFrame(int codeOffset, Stack<String> stack, HashMap<Integer, String> locals) {
+      this.codeOffset = codeOffset;
+      this.stack = stack.toArray(new String[stack.size()]);
+      this.locals = new String[locals.size()];
+
+      for (int idx : locals.keySet()) {
+        this.locals[idx] = locals.get(idx);
+      }
+    }
+  }
 
   // Code Generation Working Variables //
   private String className;
@@ -47,14 +71,15 @@ public class JVM {
   private int nrOfInnerClasses;
 
   private DynamicByteBuffer code;
-  private int stackSize;
+  private Stack<String> stack;
   private int maxStackSize;
-  private int localsSize;
+  private HashMap<Integer, String> locals;
   private int maxLocalsSize;
 
   private HashMap<Integer, String> labels;
   private HashMap<String, Integer> addresses;
-  private HashMap<Integer, String> methodDescriptors;
+  // sorted automatically since labels can only be added in order
+  private ArrayList<StackMapFrame> stackMapFrames;
   
 
   public JVM() {
@@ -71,8 +96,6 @@ public class JVM {
 
     this.innerClasses = new DynamicByteBuffer();
     this.nrOfInnerClasses = 0;
-
-    this.methodDescriptors = new HashMap<>();
   }
 
 
@@ -109,7 +132,7 @@ public class JVM {
       bytecode.writeShort(0);
     }
     else {
-      bytecode.writeShort(1);
+      bytecode.writeShort(1); // attributes: 1 InnerClasses
       bytecode.writeShort( addUtf8ToConstantPool("InnerClasses") );
       // innerClassses + 2B number_of_classes
       bytecode.writeInt( innerClasses.size() + 2 );
@@ -141,12 +164,14 @@ public class JVM {
 
     this.nrOfMethods++;
     this.code = new DynamicByteBuffer();
-    this.stackSize = 0;
-    this.maxStackSize = this.stackSize;
-    this.localsSize = 1; // string[] arg
-    this.maxLocalsSize = this.localsSize;
+    this.stack = new Stack<>();
+    this.maxStackSize = stack.size();
+    this.locals = new HashMap<>();
+    updateLocalsFor(descriptor, 0);
+    this.maxLocalsSize = locals.size();
     this.labels = new HashMap<>();
     this.addresses = new HashMap<>();
+    this.stackMapFrames = new ArrayList<>();
   }
 
   public void exitMethod() {
@@ -154,15 +179,85 @@ public class JVM {
     
     // code attribute
     methods.writeShort( addUtf8ToConstantPool("Code") );
-    // code size + 2B stack size + 2B local size + 4B code size 
-    // + 2B exception table size + 2B attributes table count + attributes table size
-    methods.writeInt(code.size() + 12);
-    methods.writeShort(maxStackSize);
-    methods.writeShort(maxLocalsSize);
-    methods.writeInt(code.size());
-    methods.write( backpatch( code.toByteArray() ) );
-    methods.writeShort(0); // exception table size
-    methods.writeShort(0); // attributes table count
+
+    // attributes
+    if (stackMapFrames.size() == 0) {
+       // code size + 2B stack size + 2B local size + 4B code size 
+      // + 2B exception table size + 2B attributes table count
+      methods.writeInt(code.size() + 12);
+      methods.writeShort(maxStackSize);
+      methods.writeShort(maxLocalsSize);
+      methods.writeInt(code.size());
+      methods.write( backpatch( code.toByteArray() ) );
+      methods.writeShort(0); // exception table size
+      methods.writeShort(0);
+    }
+    else {
+      DynamicByteBuffer stackMapTable = new DynamicByteBuffer();
+      int nrOfStackMapFrames = 0;
+
+      int currOffset = 0;
+
+      for (StackMapFrame stackmap : stackMapFrames) {
+        int offsetDelta = stackmap.codeOffset - currOffset;
+        if (offsetDelta < 0)
+          throw new IllegalStateException("Labels should be added in order, so the offsets should be sorted ascending!");
+
+        if (offsetDelta != 0) {
+          nrOfStackMapFrames++;
+          if (currOffset != 0) offsetDelta--;
+
+          // generate only full frames for simplicity
+          stackMapTable.writeByte(StackMapFrame.FULL_FRAME);
+          stackMapTable.writeShort(offsetDelta);
+
+          stackMapTable.writeShort(stackmap.locals.length);
+          for (int idx = 0; idx < stackmap.locals.length; idx++) {
+            System.out.println(stackmap.locals[idx]);
+            if (stackmap.locals[idx].equals("I")) {
+              stackMapTable.writeByte(StackMapFrame.VerificationTypeInfo.INTEGER);
+            }
+            else {
+              stackMapTable.writeByte(StackMapFrame.VerificationTypeInfo.OBJECT);
+              stackMapTable.writeShort( addClassToConstantPool(stackmap.locals[idx]) );
+            }
+          }
+
+          System.out.println("stack");
+
+          stackMapTable.writeShort(stackmap.stack.length);
+          for (int idx = 0; idx < stackmap.stack.length; idx++) {
+            System.out.println(stackmap.stack[idx]);
+            if (stackmap.stack[idx].equals("I")) {
+              stackMapTable.writeByte(StackMapFrame.VerificationTypeInfo.INTEGER);
+            }
+            else {
+              stackMapTable.writeByte(StackMapFrame.VerificationTypeInfo.OBJECT);
+              stackMapTable.writeShort( addClassToConstantPool(stackmap.stack[idx]) );
+            }
+          }
+          
+          currOffset = stackmap.codeOffset;
+        }
+      }
+
+      // code size + 2B stack size + 2B local size + 4B code size 
+      // + 2B exception table size + 2B attributes table count + attributes table size
+      methods.writeInt(code.size() + 12 + (stackMapTable.size() + 8));
+      methods.writeShort(maxStackSize);
+      methods.writeShort(maxLocalsSize + 1);
+      methods.writeInt(code.size());
+      methods.write( backpatch( code.toByteArray() ) );
+      methods.writeShort(0); // exception table size
+
+      // attributes: 1 StackMapTable
+      methods.writeShort(1);
+      methods.writeShort( addUtf8ToConstantPool("StackMapTable") );
+      // stackMapTable + 2B number_of_entries
+      methods.writeInt( stackMapTable.size() + 2 );
+      methods.writeShort(nrOfStackMapFrames);
+      methods.write(stackMapTable.toByteArray());
+    }
   }
 
   public void addField(String name, String descriptor, boolean staticFlag) {
@@ -193,6 +288,7 @@ public class JVM {
 
   public void addLabel(String label) {
     addresses.put(label, code.size());
+    stackMapFrames.add( new StackMapFrame(code.size(), stack, locals) );
   }
 
   public byte[] backpatch(byte[] bytecode) {
@@ -320,7 +416,6 @@ public class JVM {
     int constIdx = ++nrOfConstants;
 
     methodRefConstants.put(methodRef, constIdx);
-    methodDescriptors.put(constIdx, methodType);
     return constIdx;
   }
 
@@ -331,49 +426,56 @@ public class JVM {
     final int opcode = 0x02;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void iconst_0() {
     final int opcode = 0x03;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void iconst_1() {
     final int opcode = 0x04;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void iconst_2() {
     final int opcode = 0x05;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void iconst_3() {
     final int opcode = 0x06;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void iconst_4() {
     final int opcode = 0x07;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void iconst_5() {
     final int opcode = 0x08;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void bipush(int b) {
@@ -381,7 +483,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeByte(b);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void sipush(int s) {
@@ -389,23 +492,26 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(s);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
-  public void ldc(int idx) {
+  public void ldc(int idx, String descriptor) {
     final int opcode = 0x12;
     code.writeByte(opcode);
     code.writeByte(idx);
 
-    incStackSize();
+    stack.push(descriptor);
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
-  public void ldc_w(int idx) {
+  public void ldc_w(int idx, String descriptor) {
     final int opcode = 0x13;
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    incStackSize();
+    stack.push(descriptor);
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   // Loads //
@@ -414,16 +520,28 @@ public class JVM {
     code.writeByte(opcode);
     code.writeByte(idx);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    
+    if (locals.containsKey(idx) && !locals.get(idx).equals("I"))
+      throw new IllegalArgumentException("The types for the local variable at " + idx + " don't match!");
+    
+    locals.put(idx, "I");
     if (idx > maxLocalsSize) maxLocalsSize = idx;
   }
 
-  public void aload(int idx) {
+  public void aload(int idx, String descriptor) {
     final int opcode = 0x19;
     code.writeByte(opcode);
     code.writeByte(idx);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    
+    if (locals.containsKey(idx) && !locals.get(idx).equals(descriptor))
+      throw new IllegalArgumentException("The types for the local variable at " + idx + " don't match!");
+    
+    locals.put(idx, descriptor);
     if (idx > maxLocalsSize) maxLocalsSize = idx;
   }
 
@@ -431,77 +549,93 @@ public class JVM {
     final int opcode = 0x1a;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    if (0 > maxLocalsSize) maxLocalsSize = 0;
   }
 
   public void iload_1() {
     final int opcode = 0x1b;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    if (1 > maxLocalsSize) maxLocalsSize = 1;
   }
 
   public void iload_2() {
     final int opcode = 0x1c;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    if (2 > maxLocalsSize) maxLocalsSize = 2;
   }
 
   public void iload_3() {
     final int opcode = 0x1d;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push("I");
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    if (3 > maxLocalsSize) maxLocalsSize = 3;
   }
 
   public void aload_0() {
     final int opcode = 0x2a;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push(locals.get(0));
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    if (0 > maxLocalsSize) maxLocalsSize = 0;
   }
 
   public void aload_1() {
     final int opcode = 0x2b;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push(locals.get(1));
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    if (1 > maxLocalsSize) maxLocalsSize = 1;
   }
 
   public void aload_2() {
     final int opcode = 0x2c;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push(locals.get(2));
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    if (2 > maxLocalsSize) maxLocalsSize = 2;
   }
 
   public void aload_3() {
     final int opcode = 0x2d;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push(locals.get(3));
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
+    if (3 > maxLocalsSize) maxLocalsSize = 3;
   }
 
   public void iaload() {
     final int opcode = 0x2e;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void aaload() {
     final int opcode = 0x32;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void baload() {
     final int opcode = 0x33;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   // Stores //
@@ -510,16 +644,26 @@ public class JVM {
     code.writeByte(opcode);
     code.writeByte(idx);
 
-    stackSize--;
+    stack.pop();
+
+    if (locals.containsKey(idx) && !locals.get(idx).equals("I"))
+      throw new IllegalArgumentException("The types for the local variable at " + idx + " don't match!");
+    
+    locals.put(idx, "I");
     if (idx > maxLocalsSize) maxLocalsSize = idx;
   }
 
-  public void astore(int idx) {
+  public void astore(int idx, String descriptor) {
     final int opcode = 0x3a;
     code.writeByte(opcode);
     code.writeByte(idx);
 
-    stackSize--;
+    stack.pop();
+
+    if (locals.containsKey(idx) && !locals.get(idx).equals(descriptor))
+      throw new IllegalArgumentException("The types for the local variable at " + idx + " don't match!");
+    
+    locals.put(idx, descriptor);
     if (idx > maxLocalsSize) maxLocalsSize = idx;
   }
 
@@ -527,77 +671,123 @@ public class JVM {
     final int opcode = 0x3b;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
+    if (locals.containsKey(0) && !locals.get(0).equals("I"))
+      throw new IllegalArgumentException("The types for the local variable at 0 don't match!");
+    
+    locals.put(0, "I");
+    if (0 > maxLocalsSize) maxLocalsSize = 0;
   }
 
   public void istore_1() {
     final int opcode = 0x3c;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
+    if (locals.containsKey(1) && !locals.get(1).equals("I"))
+      throw new IllegalArgumentException("The types for the local variable at 1 don't match!");
+    
+    locals.put(1, "I");
+    if (1 > maxLocalsSize) maxLocalsSize = 1;
   }
 
   public void istore_2() {
     final int opcode = 0x3d;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
+    if (locals.containsKey(2) && !locals.get(2).equals("I"))
+      throw new IllegalArgumentException("The types for the local variable at 2 don't match!");
+    
+    locals.put(2, "I");
+    if (2 > maxLocalsSize) maxLocalsSize = 2;
   }
 
   public void istore_3() {
     final int opcode = 0x3e;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
+    if (locals.containsKey(3) && !locals.get(3).equals("I"))
+      throw new IllegalArgumentException("The types for the local variable at 3 don't match!");
+    
+    locals.put(3, "I");
+    if (3 > maxLocalsSize) maxLocalsSize = 3;
   }
 
-  public void astore_0() {
+  public void astore_0(String descriptor) {
     final int opcode = 0x4b;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
+    if (locals.containsKey(0) && !locals.get(0).equals(descriptor))
+      throw new IllegalArgumentException("The types for the local variable at 0 don't match!");
+    
+    locals.put(0, descriptor);
+    if (0 > maxLocalsSize) maxLocalsSize = 0;
   }
 
-  public void astore_1() {
+  public void astore_1(String descriptor) {
     final int opcode = 0x4c;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
+    if (locals.containsKey(1) && !locals.get(1).equals(descriptor))
+      throw new IllegalArgumentException("The types for the local variable at 1 don't match!");
+    
+    locals.put(1, descriptor);
+    if (1 > maxLocalsSize) maxLocalsSize = 1;
   }
 
-  public void astore_2() {
+  public void astore_2(String descriptor) {
     final int opcode = 0x4d;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
+    if (locals.containsKey(2) && !locals.get(2).equals(descriptor))
+      throw new IllegalArgumentException("The types for the local variable at 2 don't match!");
+    
+    locals.put(2, descriptor);
+    if (2 > maxLocalsSize) maxLocalsSize = 2;
   }
 
-  public void astore_3() {
+  public void astore_3(String descriptor) {
     final int opcode = 0x4e;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
+    if (locals.containsKey(3) && !locals.get(3).equals(descriptor))
+      throw new IllegalArgumentException("The types for the local variable at 3 don't match!");
+    
+    locals.put(3, descriptor);
+    if (3 > maxLocalsSize) maxLocalsSize = 3;
   }
 
   public void iastore() {
     final int opcode = 0x4f;
     code.writeByte(opcode);
 
-    stackSize -= 3;
+    stack.pop();
+    stack.pop();
+    stack.pop();
   }
 
   public void aastore() {
     final int opcode = 0x53;
     code.writeByte(opcode);
 
-    stackSize -= 3;
+    stack.pop();
+    stack.pop();
+    stack.pop();
   }
 
   public void bastore() {
     final int opcode = 0x54;
     code.writeByte(opcode);
 
-    stackSize -= 3;
+    stack.pop();
+    stack.pop();
+    stack.pop();
   }
 
   // Stack //
@@ -605,19 +795,25 @@ public class JVM {
     final int opcode = 0x57;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void dup() {
     final int opcode = 0x59;
     code.writeByte(opcode);
 
-    incStackSize();
+    stack.push(stack.peek());
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void swap() {
     final int opcode = 0x5f;
     code.writeByte(opcode);
+
+    String oldTop = stack.pop();
+    String newTop = stack.pop();
+    stack.push(oldTop);
+    stack.push(newTop);
   }
 
   // Math //
@@ -625,35 +821,35 @@ public class JVM {
     final int opcode = 0x60;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void isub() {
     final int opcode = 0x64;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void imul() {
     final int opcode = 0x68;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void idiv() {
     final int opcode = 0x6c;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void irem() {
     final int opcode = 0x70;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void ineg() {
@@ -665,14 +861,14 @@ public class JVM {
     final int opcode = 0x78;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void ishr() {
     final int opcode = 0x7a;
     code.writeByte(opcode);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void iinc(int idx, int c) {
@@ -688,7 +884,7 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize--;
+    stack.pop();
   }
 
   public void ifne(String label) {
@@ -698,7 +894,7 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize--;
+    stack.pop();
   }
 
   public void iflt(String label) {
@@ -708,7 +904,7 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize--;
+    stack.pop();
   }
 
   public void ifge(String label) {
@@ -718,7 +914,7 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize--;
+    stack.pop();
   }
 
   public void ifgt(String label) {
@@ -728,7 +924,7 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize--;
+    stack.pop();
   }
 
   public void ifle(String label) {
@@ -738,7 +934,7 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize--;
+    stack.pop();
   }
 
   public void if_icmpeq(String label) {
@@ -748,7 +944,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
   public void if_icmpne(String label) {
@@ -758,7 +955,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
   public void if_icmplt(String label) {
@@ -768,7 +966,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
   public void if_icmpge(String label) {
@@ -778,7 +977,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
   public void if_icmpgt(String label) {
@@ -788,7 +988,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
   public void if_icmple(String label) {
@@ -798,7 +999,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
   public void if_acmpeq(String label) {
@@ -808,7 +1010,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
   public void if_acmpne(String label) {
@@ -818,7 +1021,8 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(branchPlaceholder); 
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
   // Control //
@@ -834,30 +1038,31 @@ public class JVM {
     final int opcode = 0xb1;
     code.writeByte(opcode);
 
-    stackSize = 0;
+    stack.clear();
   }
 
   public void ireturn() {
     final int opcode = 0xac;
     code.writeByte(opcode);
 
-    stackSize = 0;
+    stack.clear();
   }
 
   public void areturn() {
     final int opcode = 0xb0;
     code.writeByte(opcode);
 
-    stackSize = 0;
+    stack.clear();
   }
 
   // References //
-  public void getStatic(int idx) {
+  public void getStatic(int idx, String descriptor) {
     final int opcode = 0xb2;
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    incStackSize();
+    stack.push(descriptor);
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void putStatic(int idx) {
@@ -865,7 +1070,7 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    stackSize--;
+    stack.pop();
   }
 
   public void getField(int idx) {
@@ -879,35 +1084,36 @@ public class JVM {
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    stackSize -= 2;
+    stack.pop();
+    stack.pop();
   }
 
-  public void invokeVirtual(int idx) {
+  public void invokeVirtual(int idx, String descriptor) {
     final int opcode = 0xb6;
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    int stackChange = stackChangeFor(idx) - 1;
-    stackSize += stackChange;
-    if (stackSize > maxStackSize) maxStackSize = stackChange;
+    stack.pop();
+    updateStackFor(descriptor);
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
-  public void invokeStatic(int idx) {
+  public void invokeStatic(int idx, String descriptor) {
     final int opcode = 0xb8;
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    int stackChange = stackChangeFor(idx);
-    stackSize += stackChange;
-    if (stackSize > maxStackSize) maxStackSize = stackChange;
+    updateStackFor(descriptor);
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
-  public void anew(int idx) {
+  public void anew(int idx, String descriptor) {
     final int opcode = 0xbb;
     code.writeByte(opcode);
     code.writeShort(idx);
 
-    incStackSize();
+    stack.push(descriptor);
+    if (stack.size() > maxStackSize) maxStackSize = stack.size();
   }
 
   public void newArray(int aType) {
@@ -928,28 +1134,40 @@ public class JVM {
   }
 
   // Extended //
-  public void wide(String mnemonic, int idx) {
+  public void wide(String mnemonic, int idx, String descriptor) {
     int opcode;
 
     switch (mnemonic) {
       case "iload": 
         opcode = 0x15;
-        incStackSize();
+        stack.push(descriptor);
+        if (stack.size() > maxStackSize) maxStackSize = stack.size();
         break;
       
       case "aload": 
         opcode = 0x19;
-        incStackSize();
+        stack.push(descriptor);
+        if (stack.size() > maxStackSize) maxStackSize = stack.size();
         break;
 
       case "istore": 
         opcode = 0x36;
-        stackSize--;
+        stack.pop();
+        if (locals.containsKey(idx) && !locals.get(idx).equals(descriptor))
+          throw new IllegalArgumentException("The types for the local variable at " + idx + " don't match!");
+        
+        locals.put(idx, descriptor);
+        if (0 > maxLocalsSize) maxLocalsSize = 0;
         break;
 
       case "astore": 
         opcode = 0x3a;
-        stackSize--;
+        stack.pop();
+        if (locals.containsKey(idx) && !locals.get(idx).equals(descriptor))
+          throw new IllegalArgumentException("The types for the local variable at " + idx + " don't match!");
+        
+        locals.put(idx, descriptor);
+        if (0 > maxLocalsSize) maxLocalsSize = 0;
         break;
 
       default: 
@@ -971,41 +1189,66 @@ public class JVM {
 
 
   // Helpers //
-  private void incStackSize() {
-    stackSize++;
-    if (stackSize > maxStackSize) maxStackSize = stackSize;
-  }
-
-  private int stackChangeFor(int methodIdx) {
-    if (!methodDescriptors.containsKey(methodIdx))
-      throw new IllegalStateException("Method with index " + methodIdx + " not found in the constant pool!");
-
-    String methodDescriptor = methodDescriptors.get(methodIdx);
-    if (!methodDescriptor.startsWith("("))
-      throw new IllegalStateException("Missing parameter list for method at index " + methodIdx + "!");
-
-    int params = 0;
-    boolean returnsVoid = methodDescriptor.endsWith(")V");
-
+  private void updateStackFor(String descriptor) {
     int idx = 1;
     boolean objectType = false;
 
-    while (methodDescriptor.charAt(idx) != ')') {
-      char c = methodDescriptor.charAt(idx);
+    while (descriptor.charAt(idx) != ')') {
+      char c = descriptor.charAt(idx);
 
       if (!objectType) {
-        objectType = (c == 'L');
-        params++;
+        stack.pop();
+        objectType = (c == 'L' || c == '[');
       }
 
       objectType = !(objectType && c == ';');
       idx++;
 
-      if (idx > methodDescriptor.length())
-        throw new IllegalStateException("End of parameter list not found for method at index " + methodIdx + "!");
+      if (idx > descriptor.length())
+        throw new IllegalStateException("End of parameter list not found in the descriptor!");
     }
 
-    return (returnsVoid) ? -params : 1 - params;
+    String returnDescriptor = descriptor.substring(idx + 1, descriptor.length());
+
+    if (!returnDescriptor.equals("V")) {
+      stack.push(returnDescriptor);
+    }
+  }
+
+  private void updateLocalsFor(String descriptor, int localsStartIdx) {
+    int idx = 1;
+    int objectStart = 0;
+    boolean objectType = false;
+
+    while (descriptor.charAt(idx) != ')') {
+      String paramDescriptor = descriptor.substring(idx, idx + 1);
+
+      if (!objectType) {
+        if (!paramDescriptor.equals("L") && !paramDescriptor.equals("[")) {
+          locals.put(localsStartIdx++, paramDescriptor);
+        }
+        else {
+          objectStart = idx;
+          objectType = true;
+        }
+      }
+      else if (paramDescriptor.equals(";")) {
+        paramDescriptor = descriptor.substring(objectStart, idx + 1);
+        locals.put(localsStartIdx++, paramDescriptor);
+        objectType = false;
+      }
+
+      idx++;
+
+      if (idx > descriptor.length())
+        throw new IllegalStateException("End of parameter list not found in the descriptor!");
+    }
+
+    String returnDescriptor = descriptor.substring(idx + 1, descriptor.length());
+
+    if (!returnDescriptor.equals("V")) {
+      stack.push(returnDescriptor);
+    }
   }
 
 }
