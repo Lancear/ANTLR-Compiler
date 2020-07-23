@@ -11,7 +11,7 @@ import specs.helpers.*;
 public class Consts extends Test {
 
   public Consts() {
-    super("Consts", "-1012345\n532020\n101101101101");
+    super("Consts", "-1012345\n532020\n101101101101-1");
   }
 
   @Override
@@ -67,7 +67,12 @@ public class Consts extends Test {
       .dup()
       .ldc( consts.addInteger(101101) )
       .invokeVirtual(outPrint)
+      .dup()
       .ldc_w( consts.addInteger(101101) )
+      .invokeVirtual(outPrint)
+      .iconst_m1()
+      .iconst_1()
+      .pop()
       .invokeVirtual(outPrint)
       .vreturn();
   }

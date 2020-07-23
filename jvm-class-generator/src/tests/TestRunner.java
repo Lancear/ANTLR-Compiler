@@ -9,6 +9,7 @@ public class TestRunner {
     new LoadAndStore(),
     new Math(),
     new Arrays(),
+    new Conditions(),
   };
 
   public static void main(String[] args) {
