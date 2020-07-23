@@ -6,6 +6,7 @@ import java.util.Stack;
 
 import impl.helpers.DynamicByteBuffer;
 import specs.class_content.Method;
+import specs.helpers.AccessFlags;
 import specs.helpers.Descriptor;
 
 public class Frame extends specs.data_areas.Frame {
@@ -14,7 +15,11 @@ public class Frame extends specs.data_areas.Frame {
     super(method, 0, new HashMap<>(), new Stack<>());
 
     ArrayList<String> params = Descriptor.METHOD_PARAM_DESCRIPTORS(method.descriptor());
-    int idx = 0; // always static methods :/
+    int idx = 0;
+    
+    if ((method.accessFlags() & AccessFlags.STATIC) != AccessFlags.STATIC) {
+      locals.put(idx++, method.clazz().descriptor());
+    }
     
     for (String paramDescriptor : params) {
       locals.put(idx++, paramDescriptor);
@@ -45,7 +50,13 @@ public class Frame extends specs.data_areas.Frame {
       }
       else {
         bytecode.writeByte(VerificationTypeInfo.OBJECT);
-        bytecode.writeShort( method.constantPool().addClass( locals.get(idx) ) );
+        String type = locals.get(idx);
+        if (type.startsWith("L")) {
+          // substring -> remove L; from the descriptor, only the internal name is needed
+          type = type.substring( 1, type.length() - 1 );
+        }
+
+        bytecode.writeShort( method.constantPool().addClass(type) );
       }
     }
 
@@ -56,7 +67,13 @@ public class Frame extends specs.data_areas.Frame {
       }
       else {
         bytecode.writeByte(VerificationTypeInfo.OBJECT);
-        bytecode.writeShort( method.constantPool().addClass( stack.get(idx) ) );
+        String type = stack.get(idx);
+        if (type.startsWith("L")) {
+          // substring -> remove L; from the descriptor, only the internal name is needed
+          type = type.substring( 1, type.length() - 1 );
+        }
+
+        bytecode.writeShort( method.constantPool().addClass(type) );
       }
     }
 

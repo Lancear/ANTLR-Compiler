@@ -59,7 +59,7 @@ public abstract class JvmClass implements InfoStructure {
   /**
    * A mask of flags used to denote access permissions to and properties of this class or interface.
    * 
-   * @see specs.AccessFlags AccessFlags
+   * @see specs.helpers.AccessFlags AccessFlags
    * @see
    * <a href="https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.1-200-E.1">
    *  The JVM Specs - Class access and property modifiers (Java SE14)
@@ -70,7 +70,7 @@ public abstract class JvmClass implements InfoStructure {
   /**
    * A mask of flags used to denote access permissions to and properties of this class or interface.
    * 
-   * @see specs.AccessFlags AccessFlags
+   * @see specs.helpers.AccessFlags AccessFlags
    * @see
    * <a href="https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.1-200-E.1">
    *  The JVM Specs - Class access and property modifiers (Java SE14)
@@ -161,6 +161,11 @@ public abstract class JvmClass implements InfoStructure {
    * @return the created field
    * 
    * @see specs.class_content.Field Field
+   * @see specs.helpers.AccessFlags AccessFlags
+   * @see
+   * <a href="https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.5-200-A.1">
+   *  The JVM Specs - Field access and property modifiers (Java SE14)
+   * </a>
    */
   public abstract Field addField(String name, String descriptor, int accessFlags);
 
@@ -209,6 +214,11 @@ public abstract class JvmClass implements InfoStructure {
    * @return the created method
    * 
    * @see specs.class_content.Method Method
+   * @see specs.helpers.AccessFlags AccessFlags
+   * @see
+   * <a href="https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.6-200-A.1">
+   *  The JVM Specs - Method access and property modifiers (Java SE14)
+   * </a>
    */
   public abstract Method addMethod(String name, String descriptor, int accessFlags);
 

@@ -21,6 +21,7 @@ public abstract class Descriptor {
   public final static String BOOLEAN = "Z";
   public final static String VOID = "V";
   public final static String STRING = REFERENCE( NAME_OF(String.class) );
+  public final static String MAIN = METHOD(VOID, ARRAY(STRING));
 
   /**
    * Returns the internal form of the class-name

@@ -576,7 +576,6 @@ public class Code extends specs.attributes.Code {
 
   public specs.attributes.Code iinc(int idx, int c, boolean wide) {
     final int opcode = 0x84;
-    code.writeByte(opcode);
 
     if (!wide) {
       code.writeByte(opcode);
@@ -852,6 +851,27 @@ public class Code extends specs.attributes.Code {
     return this;
   }
 
+  public specs.attributes.Code invokeSpecial(int id) {
+    final int opcode = 0xb7;
+    code.writeByte(opcode);
+    code.writeShort(id);
+    
+    String methodDescriptor = parent.constantPool().findDescriptorByIndex(id);
+
+    for (int counter = 0; counter < Descriptor.METHOD_PARAM_DESCRIPTORS(methodDescriptor).size(); counter++)
+      currFrame.stack.pop();
+
+    // objectref
+    currFrame.stack.pop();
+
+    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTORS(methodDescriptor);
+    if (!returnDescriptor.equals(Descriptor.VOID))
+      currFrame.stack.push(returnDescriptor);
+
+    if (currFrame.stack.size() > maxStackSize) maxStackSize = currFrame.stack.size();
+    return this;
+  }
+
   public specs.attributes.Code invokeStatic(int id) {
     final int opcode = 0xb8;
     code.writeByte(opcode);
@@ -859,7 +879,6 @@ public class Code extends specs.attributes.Code {
 
     String methodDescriptor = parent.constantPool().findDescriptorByIndex(id);
 
-    currFrame.stack.pop();
     for (int counter = 0; counter < Descriptor.METHOD_PARAM_DESCRIPTORS(methodDescriptor).size(); counter++)
       currFrame.stack.pop();
 

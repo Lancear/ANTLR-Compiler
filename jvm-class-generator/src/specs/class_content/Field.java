@@ -22,7 +22,7 @@ public abstract class Field implements InfoStructure {
   /**
    * A mask of flags used to denote access permissions to and properties of this field.
    * 
-   * @see specs.AccessFlags AccessFlags
+   * @see specs.helpers.AccessFlags AccessFlags
    * @see
    * <a href="https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.5-200-A.1">
    *  The JVM Specs - Field access and property modifiers (Java SE14)

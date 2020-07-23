@@ -23,6 +23,13 @@ public abstract class InnerClasses extends Attribute {
    */
   public final static String name = "InnerClasses";
 
+  /**
+   * Adds an inner class to the inner classes attribute.
+   * @param innerClass ... the inner class
+   * @param fileName ... the {@code class} file name of the inner class
+   */
+  public abstract InnerClasses add(JvmClass innerClass, String fileName);
+
   public InnerClasses(InfoStructure parent) {
     super(parent);
 

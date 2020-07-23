@@ -2,6 +2,7 @@ package specs.attributes;
 
 import specs.InfoStructure;
 import specs.class_content.Method;
+import specs.data_areas.ConstantPool;
 
 /**
  * The {@code Code} class represents the structure of the JVM {@code Code} attribute.
@@ -28,6 +29,17 @@ public abstract class Code extends Attribute {
    * </a>
    */
   public final static String name = "Code";
+
+  /**
+   * The {@code constantPool} is a table of structures representing various string constants, 
+   * class and interface names, field names, and other constants that are referred to within the 
+   * {@code ClassFile} structure and its substructures.
+   * 
+   * @see specs.ConstantPool ConstantPool
+   */
+  public ConstantPool constantPool() {
+    return parent.constantPool();
+  }
 
   /**
    * Adds a label at the current position in the code.
@@ -541,6 +553,15 @@ public abstract class Code extends Attribute {
    * @param index ... {@code u2} the index of the {@code ConstMethodrefInfo}
    */
   public abstract Code invokeVirtual(int index);
+
+  /**
+   * Invoke instance method; direct invocation of instance initialization methods and methods of the current class and its supertypes.
+   * <br><br>
+   * <i>{@code Operand Stack}: objectref, [...args] -> [returnValue]</i>
+   * 
+   * @param index ... {@code u2} the index of the {@code ConstMethodrefInfo}
+   */
+  public abstract Code invokeSpecial(int index);
 
   /**
    * Invokes a class (static) method.
