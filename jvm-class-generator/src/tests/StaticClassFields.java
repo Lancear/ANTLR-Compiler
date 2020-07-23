@@ -8,10 +8,10 @@ import specs.class_content.*;
 import specs.data_areas.*;
 import specs.helpers.*;
 
-public class ClassFields extends Test {
+public class StaticClassFields extends Test {
 
-  public ClassFields() {
-    super("StaticClassField", "5");
+  public StaticClassFields() {
+    super("StaticClassFields", "5");
   }
 
   protected Field field;

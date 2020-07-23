@@ -1,10 +1,14 @@
 package tests;
 
-public class Tester {
+public class TestRunner {
 
   public static Test[] tests = new Test[] { 
-    new ClassFields(),
+    new StaticClassFields(),
     new InnerClasses(),
+    new Consts(),
+    new LoadAndStore(),
+    new Math(),
+    new Arrays(),
   };
 
   public static void main(String[] args) {
@@ -14,7 +18,7 @@ public class Tester {
       }
       catch(Exception ex) {
         System.err.println();
-        System.err.println("[ERROR] " + test.name + ", " + ex.getClass().getSimpleName() + ": " + ex.getLocalizedMessage());
+        System.err.println("[ERROR] " + test.name);
         ex.printStackTrace();
         System.err.println();
         System.err.println();
@@ -39,7 +43,7 @@ public class Tester {
       System.out.println("[SUCCESS] " + test.name);
     }
     else {
-      System.out.println("[FAILED] " + test.name);
+      System.out.println("[FAILED]  " + test.name);
       System.out.println("  Expected: '" + test.expectedOutput.replaceAll("\n", "\\\\n") + "'");
       System.out.println("  Result:   '" + output.replaceAll("\n", "\\\\n") + "'");
     }

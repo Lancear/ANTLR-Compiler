@@ -1,8 +1,8 @@
 src="./src"
 bin="./bin"
 
-tester="tests.Tester"
-testerPath="$src/tests/Tester.java"
+testRunner="tests.TestRunner"
+testRunnerPath="$src/tests/TestRunner.java"
 
-javac -sourcepath $src -d $bin $testerPath
-java -classpath $bin $tester
+javac -sourcepath $src -d $bin $testRunnerPath
+java -classpath $bin $testRunner

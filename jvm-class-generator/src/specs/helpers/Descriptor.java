@@ -39,10 +39,43 @@ public abstract class Descriptor {
   }
 
   /**
-   * Returns an array descriptor of the given type.
+   * Returns an array descriptor of the given type-descriptor.
    */
   public static String ARRAY(String type) {
     return "[" + type;
+  }
+
+  /**
+   * Returns an array descriptor of the given arraytype.
+   */
+  public static String ARRAY(int atype) {
+    switch (atype) {
+      case ArrayType.BOOLEAN:
+        return ARRAY(BOOLEAN);
+      
+      case ArrayType.CHAR:
+        return ARRAY(CHAR);
+
+      case ArrayType.FLOAT:
+        return ARRAY(FLOAT);
+
+      case ArrayType.DOUBLE:
+        return ARRAY(DOUBLE);
+
+      case ArrayType.BYTE:
+        return ARRAY(BYTE);
+      
+      case ArrayType.SHORT:
+        return ARRAY(SHORT);
+
+      case ArrayType.INT:
+        return ARRAY(INT);
+
+      case ArrayType.LONG:
+        return ARRAY(LONG);
+    }
+
+    throw new IllegalArgumentException("Invalid atype, atype must be a vaild ArrayType!");
   }
 
   /**

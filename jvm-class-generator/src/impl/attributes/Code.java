@@ -358,7 +358,7 @@ public class Code extends specs.attributes.Code {
     }
 
     currFrame.locals.put(idx, currFrame.stack.pop());
-    if (idx > currFrame.locals.size()) maxLocalsIdx = idx;
+    if (idx > maxLocalsIdx) maxLocalsIdx = idx;
     return this;
   }
 
@@ -376,7 +376,7 @@ public class Code extends specs.attributes.Code {
     }
 
     currFrame.locals.put(idx, currFrame.stack.pop());
-    if (idx > currFrame.locals.size()) maxLocalsIdx = idx;
+    if (idx > maxLocalsIdx) maxLocalsIdx = idx;
     return this;
   }
 
@@ -763,6 +763,8 @@ public class Code extends specs.attributes.Code {
     final int opcode = 0xa7;
     code.writeByte(opcode);
     code.writeShort(BRANCH_PLACEHOLDER); 
+
+    frames.push(new impl.data_areas.Frame(currFrame, code.size()));
     return this;
   }
 
@@ -903,19 +905,28 @@ public class Code extends specs.attributes.Code {
     final int opcode = 0xbc;
     code.writeByte(opcode);
     code.writeByte(aType);
+
+    currFrame.stack.pop();
+    currFrame.stack.push( Descriptor.ARRAY(aType) );
     return this;
   }
 
-  public specs.attributes.Code anewArray(int idx) {
+  public specs.attributes.Code anewArray(int id) {
     final int opcode = 0xbd;
     code.writeByte(opcode);
-    code.writeShort(idx);
+    code.writeShort(id);
+
+    currFrame.stack.pop();
+    currFrame.stack.push( Descriptor.ARRAY( parent.constantPool().findDescriptorByIndex(id) ) );
     return this;
   }
 
   public specs.attributes.Code arraylength() {
     final int opcode = 0xbe;
     code.writeByte(opcode);
+
+    currFrame.stack.pop();
+    currFrame.stack.push(Descriptor.INT);
     return this;
   }
 
