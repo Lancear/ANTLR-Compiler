@@ -1,4 +1,4 @@
-package util;
+package impl.helpers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;

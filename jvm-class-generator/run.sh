@@ -1,10 +1,11 @@
 src="./src"
 bin="./bin"
 output="./output"
-main="app.Main"
-outputClass="Main"
+main="impl.Backend"
+mainPath="impl/Backend"
+outputClass="TestA"
 
-javac -sourcepath $src -d $bin $src/app/Main.java
+javac -sourcepath $src -d $bin $src/$mainPath.java
 java -classpath $bin $main
 echo
 echo
