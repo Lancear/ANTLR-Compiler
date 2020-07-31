@@ -1,0 +1,11 @@
+/* Type check test input.
+ * <expected result> ERROR 24 (line 10, column 12)
+ * illegal operand types for binary operator %
+ */
+Program test03
+Declare
+    Const b = False;
+    int k;
+Begin
+    k := b % 11;
+End test03.

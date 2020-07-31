@@ -1,0 +1,8 @@
+--- Start test05 ---
+3+4*2 = 11 (11 expected)
+True And False = False (False expected)
+b = true And ((constant == constant-1) Or (3 < 4)) = True (True expected)
+b = 4 > 3 And 5 >= 5 And -2 <= -1 = True (True expected)
+k = -(constant % 3) + 11/3*3 = 8 (8 expected)
+k = +(k-2)*(k-1) = 42 (42 expected)
+--- End test05 ---

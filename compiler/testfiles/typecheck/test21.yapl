@@ -1,0 +1,13 @@
+/* Type check test input.
+ * <expected result> ERROR 32 (line 12, column 12)
+ * too few arguments for procedure proc
+ */
+Program test21
+
+Procedure void proc(int k, int m)
+Begin
+End proc;
+
+Begin
+    proc(10);
+End test21.

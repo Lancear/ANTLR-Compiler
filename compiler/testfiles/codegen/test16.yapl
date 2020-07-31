@@ -1,0 +1,70 @@
+/* CodeGen test input - recursive procedures (quicksort), without array parameters.
+ */
+Program test16
+Declare
+    Const ARRAYLEN = 10;
+    int[] a;
+
+Procedure void printArray()
+Declare
+    int i;
+Begin
+    i := 0;
+    While i < #a Do
+        writeint(a[i]);
+        Write " ";
+        i := i + 1;
+    EndWhile;
+    writeln();
+End printArray;
+
+Procedure void init()
+Declare
+    int i, j, k;
+Begin
+    i := 0; j := 20; k := -1;
+    While i < #a Do
+        a[i] := i + j;
+        i := i + 1;
+        j := ((j + 30) % 64) * k;
+        k := -k;
+    EndWhile;
+End init;
+
+Procedure void quicksort(int left, int right)
+Declare
+    int i, j, x, w, middle;
+Begin
+    /* partitioning */
+    i := left; j := right;
+    middle := (left + right) / 2;
+    x := a[middle]; /* pivot element */
+    While i <= j Do
+        While a[i] < x Do i := i+1; EndWhile;
+        While a[j] > x Do j := j-1; EndWhile;
+        If i <= j Then
+            /* swap a[i] and a[j] */
+            w := a[i]; a[i] := a[j]; a[j] := w;
+            i := i+1; j := j-1;
+        EndIf;
+    EndWhile;
+    /* recursion */
+    If left < j Then quicksort(left, j); EndIf;
+    If i < right Then quicksort(i, right); EndIf;
+End quicksort;
+
+Begin
+    Write "--- Start test16 ---";
+    writeln();
+
+    a := new int[ARRAYLEN];
+    init();
+    Write "Input Array: ";
+    printArray();
+    quicksort(0, ARRAYLEN-1);
+    Write "Sorted Array: ";
+    printArray();
+
+    Write "--- End test16 ---";
+    writeln();
+End test16.

@@ -1,0 +1,8 @@
+/* Parser test input - 
+ * <expected result> ERROR 3 (line 7, column 10)
+ * parse error: unexpected token '10'
+ */
+Program test09
+Declare
+    bool[10] m;
+Begin End test09.

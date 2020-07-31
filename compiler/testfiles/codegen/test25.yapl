@@ -1,0 +1,81 @@
+/* CodeGen test input - records and arrays.
+ */
+Program test25
+
+Procedure void printArray(int[] a)
+Declare
+    int i;
+Begin
+    i := 0;
+    While i < #a Do
+        writeint(a[i]);
+        Write " ";
+        i := i + 1;
+    EndWhile;
+    writeln();
+End printArray;
+
+Declare
+    Record DataSet
+        int[] samples;
+        int min, max;
+    EndRecord;
+
+Procedure DataSet createDataSet(int n)
+Declare
+    int i, j, k;
+    DataSet data;
+Begin
+    data := new DataSet;
+    data.samples := new int[n];
+    data.min := 100;
+    data.max := -100;
+    i := 0;
+    j := (n*11) % 64; 
+    k := -1;
+    While i < #data.samples Do
+        data.samples[i] := i + j;
+        If data.samples[i] < data.min Then
+            data.min := data.samples[i];
+        EndIf;
+        If data.samples[i] > data.max Then
+            data.max := data.samples[i];
+        EndIf;
+        i := i + 1;
+        j := ((j + 30) % 64) * k;
+        k := -k;
+    EndWhile;
+    Return data;
+End createDataSet;
+
+Procedure void printStat(DataSet set)
+Begin
+    Write "DataSet: ";
+    printArray(set.samples);
+    Write "         count = ";
+    writeint(#set.samples);
+    writeln();
+    Write "         min = ";
+    writeint(set.min);
+    writeln();
+    Write "         max = ";
+    writeint(set.max);
+    writeln();
+End printStat;
+
+Declare
+    DataSet[] sets;
+Begin
+    Write "--- Start test25 ---";
+    writeln();
+    sets := new DataSet[2];
+    sets[0] := createDataSet(5);
+    sets[1] := createDataSet(6);
+    printStat(sets[0]);
+    printStat(sets[1]);
+    Write "first sample: ";
+    writeint(sets[0].samples[0]);
+    writeln();
+    Write "--- End test25 ---";
+    writeln();
+End test25.

@@ -1,0 +1,16 @@
+/* Type check test input.
+ * <expected result> ERROR 27 (line 15, column 10)
+ * using procedure proc (not a function) in expression
+ */
+Program test06
+
+Procedure void proc(int k)
+Begin
+End proc;
+
+Declare
+    int k;
+Begin
+    proc(1);
+    k := proc(5);
+End test06.

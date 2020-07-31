@@ -1,0 +1,10 @@
+--- Start test09 ---
+k = 1
+k = 2
+k = 3
+k = 4
+k = 5
+k = 6
+k = 7
+(7 iterations expected).
+--- End test09 ---

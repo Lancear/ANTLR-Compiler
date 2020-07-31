@@ -1,0 +1,6 @@
+--- Start test18 ---
+printArray: ( 3 2 1 )
+printArray: ( 4 3 2 1 )
+printArray: ( 3 2 1 )
+printArray: ( )
+--- End test18 ---

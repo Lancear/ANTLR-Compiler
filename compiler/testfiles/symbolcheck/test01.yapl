@@ -1,0 +1,24 @@
+/* Symbol check test input.
+ * <expected result> OK
+ */
+/* test comment: ** / */
+Program test01
+Declare
+	Const len = 10;
+	int[] arr;
+	int r;
+
+Procedure int func(int[] arr, int i)
+Begin
+	Return arr[len-1] + i*len;
+End func;
+
+Begin
+    arr := new int[len];
+	arr[0] := 10;
+	arr[#arr-1] := 9;
+	r := func(arr, len);
+	Write "program test01: ";
+	writeint(r);
+	writeln();
+End test01.

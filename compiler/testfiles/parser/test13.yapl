@@ -1,0 +1,14 @@
+/* Parser test input - multi-dimensional arrays, array length expressions.
+ * <expected result> ERROR 3 (line 13, column 27)
+ * parse error: unexpected token '('
+ */
+Program test13
+Procedure int[][] createMatrix()
+Begin
+    Return new int[10][10];
+End createMatrix;
+
+Begin
+    Write "matrix size = ";
+    writeint(#createMatrix());
+End test13.

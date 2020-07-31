@@ -1,0 +1,21 @@
+/* Type check test input.
+ * <expected result> ERROR 30 (line 20, column 17)
+ * argument #2 not applicable to procedure add
+ */
+Program test44
+
+Procedure int[][] add(int[][] m1, int[][] m2)
+Declare
+    int[][] m;
+Begin
+    m := new int[#m1][#m1[0]];
+    m[0][0] := m1[0][0] + m2[0][0];
+    Return m;
+End add;
+
+Declare
+    int[] a;
+    int[][] m;
+Begin
+    m := add(m, a); 
+End test44.

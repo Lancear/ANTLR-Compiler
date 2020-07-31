@@ -1,0 +1,23 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 22, column 15)
+ * illegal use of procedure 'createMatrix'
+ */
+Program test23
+
+Procedure int[][] createMatrix(int m, int n)
+Begin
+    Return new int[m][n];
+End createMatrix;
+
+Declare
+    int trace, k;
+    int[][] matrix;
+Begin
+    matrix := createMatrix(3, 3);
+    trace := 0;
+    k := 0;
+    While k < #matrix Do
+        trace := trace + matrix[k][k];
+    EndWhile;
+    writeint(#createMatrix);
+End test23.

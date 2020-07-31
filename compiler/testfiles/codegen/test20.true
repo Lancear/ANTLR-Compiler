@@ -1,0 +1,10 @@
+--- Start test20 ---
+a[0][0] = 19 (19 expected)
+a[0][19] = 200 (200 expected)
+a[9][0] = 101 (101 expected)
+a[9][9] = 203 (203 expected)
+a[9][19] = 102 (102 expected)
+b[1][2] = True (True expected)
+b[2][1] = False (False expected)
+b[2][3] = False (False expected)
+--- End test20 ---

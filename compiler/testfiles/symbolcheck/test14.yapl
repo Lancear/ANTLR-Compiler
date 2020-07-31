@@ -1,0 +1,11 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 10, column 5)
+ * illegal use of variable len
+ */
+Program test14
+Declare
+    int len;
+
+Begin
+    len();
+End test14.

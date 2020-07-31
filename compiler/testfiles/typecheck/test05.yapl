@@ -1,0 +1,11 @@
+/* Type check test input.
+ * <expected result> ERROR 26 (line 10, column 12)
+ * illegal operand types for equality operator !=
+ */
+Program test05
+Declare
+    bool b;
+Begin
+    b := (1 == 2 Or True == False);
+    b := b != 0;
+End test05.

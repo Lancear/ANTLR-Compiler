@@ -1,0 +1,16 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 12, column 7)
+ * type mismatch in assignment
+ */
+Program test16
+
+Procedure void proc(int k, int n)
+Declare
+    bool b;
+Begin
+    n := -13 + k;
+    b := n * 5;
+End proc;
+
+Begin
+End test16.

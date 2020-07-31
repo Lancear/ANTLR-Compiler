@@ -1,0 +1,23 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 22, column 7)
+ * type mismatch in assignment
+ */
+Program test43
+
+Procedure int[][] add(int[][] m1, int[][] m2)
+Declare
+    int[][] m;
+Begin
+    m := new int[#m1][#m1[0]];
+    m[0][0] := m1[0][0] + m2[0][0];
+    Return m;
+End add;
+
+Declare
+    Const len = 100;
+    int n;
+    int[][] m;
+Begin
+    m := new int[len][len+1];
+    n := add(m, m); 
+End test43.

@@ -1,0 +1,8 @@
+Program test01
+Declare
+    int m, n;
+Begin
+    m := 2*3;
+    n := 4;
+    WriteInt m+n;
+End

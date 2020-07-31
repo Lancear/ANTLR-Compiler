@@ -1,0 +1,19 @@
+/* Type check test input.
+ * <expected result> ERROR 30 (line 18, column 19)
+ * argument #1 not applicable to procedure proc2
+ */
+Program test26
+
+Procedure bool proc1(int m)
+Begin
+    Return m <= 31;
+End proc1;
+
+Procedure int proc2(int m)
+Begin
+    Return m * m + 1;
+End proc2;
+
+Begin
+    proc2(proc1(31));
+End test26.

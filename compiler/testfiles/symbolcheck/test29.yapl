@@ -1,0 +1,20 @@
+/* Symbol check test input.
+ * <expected result> ERROR 11 (line 17, column 5)
+ * identifier 'Node' not declared
+ */
+Program test29
+
+Procedure void func()
+Declare
+    Record Node
+        int id;
+    EndRecord;
+    int id;
+Begin
+End func;
+
+Declare
+    Node n;
+
+Begin
+End test29.

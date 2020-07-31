@@ -1,0 +1,12 @@
+/* Type check test input.
+ * <expected result> ERROR 25 (line 11, column 12)
+ * non-integer operand types for relational operator <
+ */
+Program test04
+Declare
+    Const K = 4;
+    bool b;
+Begin
+    b := K > 3;
+    b := K < b;
+End test04.

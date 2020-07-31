@@ -1,0 +1,43 @@
+/* CodeGen test input - procedures with call-by-value parameters
+ *                      and without Return statements.
+ */
+Program test13
+
+Procedure void printInt(int value)
+Begin
+    Write "printInt: value = ";
+    writeint(value);
+End printInt;
+
+Procedure void print3(int value1, int value2, bool bvalue)
+Begin
+    Write "print3: value1 = ";
+    writeint(value1);
+    Write ", value2 = ";
+    writeint(value2);
+    Write ", bvalue = ";
+    writebool(bvalue);
+End print3;
+
+Declare
+    int k;
+    bool b;
+Begin
+    Write "--- Start test13 ---";
+    writeln();
+    
+    k := 50;
+    b := False;
+    
+    printInt(10);
+    Write " (10 expected)"; writeln();
+
+    printInt(k);
+    Write " (50 expected)"; writeln();
+    
+    print3(20, k+1, b Or 3 > 5);
+    Write " (20, 51, False expected)"; writeln();
+    
+    Write "--- End test13 ---";
+    writeln();
+End test13.

@@ -1,0 +1,10 @@
+/* Symbol check test input.
+ * <expected result> ERROR 11 (line 9, column 11)
+ * identifier 'arr' not declared
+ */
+Program test05
+Declare
+    int k;
+Begin
+    k := #arr;
+End test05.

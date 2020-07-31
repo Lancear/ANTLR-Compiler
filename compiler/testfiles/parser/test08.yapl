@@ -1,0 +1,7 @@
+/* Parser test input.
+ * <expected result> ERROR 3 (line 7, column 3)
+ * parse error: unexpected token '<EOF>'
+ */
+Program test08
+Begin
+End

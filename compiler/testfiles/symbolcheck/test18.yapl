@@ -1,0 +1,7 @@
+/* Symbol check test input.
+ * <expected result> ERROR 13 (line 7, column 5)
+ * End test does not match program test18
+ */
+Program test18
+Begin
+End test.

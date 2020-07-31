@@ -1,0 +1,10 @@
+/* Type check test input.
+ * <expected result> ERROR 23 (line 9, column 10)
+ * illegal operand type for unary operator -
+ */
+Program test01
+Declare
+    int k;
+Begin
+    k := -True;
+End test01.

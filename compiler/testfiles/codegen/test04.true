@@ -1,0 +1,5 @@
+--- Start test04 ---
+writeint(k): 3 (expected 3)
+writeint(k): 10 (expected 10)
+writebool(b): True (expected True)
+--- End test04 ---

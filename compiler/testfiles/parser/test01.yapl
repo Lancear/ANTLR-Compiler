@@ -1,0 +1,50 @@
+/* Parser test input.
+ * <expected result> OK
+ * 
+ * $Id$
+ */
+/* test comment: ** / */
+Program test01
+Declare
+	Const len = 10;
+
+Procedure int func(int[] arr, int i)
+Begin
+	Return arr[#arr-1] * arr[i];
+End func;
+
+Procedure int[] createArray(int i)
+Declare
+    int[] m;
+    int j;
+Begin
+    m := new int[i*i];
+    j := 0;
+    While j < #m Do
+        Declare
+            bool even;
+        Begin
+            even := j % 2 == 0;
+            If even Then
+                m[j] := j+j;
+            Else
+                m[j] := 3*j + 1;
+            EndIf;
+        End;
+        j := j+1;
+    EndWhile;
+    Return m; 
+End createArray;
+
+Declare
+	int[] arr;
+    int r;
+Begin
+    arr := createArray(len);
+	arr[0] := 10;
+	arr[len-1] := 9;
+	r := func(arr, 0);
+	Write "test01: ";
+	writeint(r);
+	writeln();
+End test01.

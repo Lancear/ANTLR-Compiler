@@ -1,0 +1,28 @@
+/* CodeGen test input - simple assignments to global variables.
+ */
+Program test04
+Declare
+	Const constant = 10;
+	int k;
+	bool b;
+Begin
+    Write "--- Start test04 ---";
+    writeln();
+	b := True;
+    k := 3;
+	Write "writeint(k): ";
+	writeint(k);
+	Write " (expected 3)";
+	writeln();
+    k := constant;
+	Write "writeint(k): ";
+	writeint(k);
+	Write " (expected 10)";
+	writeln();
+	Write "writebool(b): ";
+	writebool(b);
+	Write " (expected True)";
+	writeln();
+    Write "--- End test04 ---";
+    writeln();
+End test04.

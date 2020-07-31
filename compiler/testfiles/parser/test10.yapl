@@ -1,0 +1,28 @@
+/* Parser test input.
+ * <expected result> ERROR 3 (line 28, column 1)
+ * parse error: unexpected token 'End'
+ * (due to missing EndIf before line 25)
+ */
+Program test10
+
+Procedure int func(int i)
+Begin
+    Return i * i / 2;
+End func;
+
+Declare
+    int r, x;
+Begin
+    r := readint();
+    If r < 10 Then
+        If r < 0 Then
+            x := func(-r);
+        Else
+            x := func(r);
+        EndIf;
+    Else 
+        x := func(r/10) * 10;
+    Write "x = ";
+    writeint(x);
+    writeln();
+End test10.

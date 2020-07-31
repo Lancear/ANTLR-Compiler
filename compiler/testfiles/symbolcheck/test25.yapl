@@ -1,0 +1,10 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 8, column 5)
+ * illegal use of constant 'NUM'
+ */
+Program test25
+Declare
+    Const NUM = 10;
+    NUM n;
+Begin
+End test25.

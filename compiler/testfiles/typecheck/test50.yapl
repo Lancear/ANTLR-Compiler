@@ -1,0 +1,39 @@
+/* Type check test input.
+ * <expected result> ERROR 30 (line 38, column 15)
+ * argument #1 not applicable to procedure printList
+ */
+Program test50
+Declare
+    Record List
+        int item;
+        List next;
+    EndRecord;
+
+Procedure void printList(List list)
+Declare
+    List node;
+Begin
+    node := list;
+    While node.item >= 0 Do
+        writeint(node.item);
+        writeln();
+        node := node.next;
+    EndWhile;
+End printList;
+
+Declare
+    List[] list;
+    Const N = 100;
+    int i;
+Begin
+    list := new List[N+1];
+    i := 0;
+    While i < N Do
+        list[i].item := i+1;
+        list[i].next := list[i+1];
+        i := i+1;
+	EndWhile;
+    list[i].item := -1;
+    printList(list[0]);
+    printList(list);
+End test50.

@@ -1,0 +1,16 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 10, column 20)
+ * illegal use of procedure 'fact'
+ */
+Program test20
+
+Procedure int fact(int k)
+Begin
+    If (k > 2) Then
+        Return k * fact[k-1];
+    EndIf;
+    Return k;
+End fact;
+
+Begin
+End test20.

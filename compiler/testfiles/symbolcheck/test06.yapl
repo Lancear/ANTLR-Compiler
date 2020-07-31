@@ -1,0 +1,15 @@
+/* Symbol check test input.
+ * <expected result> ERROR 11 (line 14, column 5)
+ * identifier r not declared
+ */
+Program test06
+
+Procedure void proc()
+Declare
+    int r;
+Begin
+End proc;
+
+Begin
+    r := 5;
+End test06.

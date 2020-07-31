@@ -1,0 +1,11 @@
+--- Start test21 ---
+Matrix m:
+  0  1  2  3
+  1  2  3  4
+  4  5  6  7
+m transposed:
+  0  1  4
+  1  2  5
+  2  3  6
+  3  4  7
+--- End test21 ---

@@ -1,0 +1,53 @@
+/* CodeGen test input - local variables of array types in main program.
+ */
+Program test11
+Declare
+    Const len = 10;
+    int[] a, x;
+Begin
+    Write "--- Start test11 ---";
+    writeln();
+    
+    a := new int[len];
+    x := new int[len+1];
+    Declare
+        int[] b;
+    Begin
+        b := new int[len+2];
+        a[2] := 5;
+        x[5] := 10;
+        Write "(global) a[2] = ";
+        writeint(a[2]);
+        Write " (5 expected)";
+        writeln();
+        Declare
+            int[] a;
+        Begin
+            a := new int[len+3];
+            a[2] := 2;
+            b[1] := 1;
+            Write "(local)  a[2] = ";
+            writeint(a[2]);
+            Write " (2 expected)";
+            writeln();
+            Write "(global) x[5] = ";
+            writeint(x[5]);
+            Write " (10 expected)";
+            writeln();
+        End;
+        Write "(local)  b[1] = ";
+        writeint(b[1]);
+        Write " (1 expected)";
+        writeln();
+    End;
+    Write "(global) a[2] = ";
+    writeint(a[2]);
+    Write " (5 expected)";
+    writeln();
+    Write "(global) x[5] = ";
+    writeint(x[5]);
+    Write " (10 expected)";
+    writeln();    
+    Write "--- End test11 ---";
+    writeln();
+End test11.

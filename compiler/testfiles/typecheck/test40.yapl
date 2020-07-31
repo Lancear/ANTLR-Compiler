@@ -1,0 +1,13 @@
+/* Type check test input.
+ * <expected result> ERROR 22 (line 12, column 10)
+ * expression after '#' is not an array type
+ */
+Program test40
+Declare
+    int k;
+    int[] a;
+    int[][] a2;
+Begin
+    a[0] := #a2[1];
+    k := #a2[0][2];
+End test40.

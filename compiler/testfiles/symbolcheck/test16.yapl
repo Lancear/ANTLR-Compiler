@@ -1,0 +1,11 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 10, column 5)
+ * illegal use of constant k
+ */
+Program test16
+Declare
+    Const k = 10;
+
+Begin
+    k := 5;
+End test16.

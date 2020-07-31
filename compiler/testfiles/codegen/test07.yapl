@@ -1,0 +1,52 @@
+/* CodeGen test input - 1-dimensional array expressions and assignments.
+ */
+Program test07
+Declare
+    Const len = 10;
+    Const true = True;
+    int[] a;
+    bool[] b;
+Begin
+    Write "--- Start test07 ---";
+    writeln();
+    a := new int[len];
+    b := new bool[len+1];
+    a[1] := #b;
+    a[0] := a[1]-1;
+    a[len-1] := len;
+    b[0] := True;
+    b[2] := true And b[0];
+    b[2/2] := False;
+
+    Write "a[0] = ";
+    writeint(a[0]);
+    Write " (10 expected)";
+    writeln();
+    Write "a[1] = ";
+    writeint(a[1]);
+    Write " (11 expected)";
+    writeln();
+    Write "a[len-1] = ";
+    writeint(a[len-1]);
+    Write " (10 expected)";
+    writeln();
+    Write "a[9] = ";
+    writeint(a[9]);
+    Write " (10 expected)";
+    writeln();
+    
+	Write "b[0] = ";
+	writebool(b[0]);
+	Write " (True expected)";
+	writeln();
+	Write "b[1] = ";
+	writebool(b[1]);
+	Write " (False expected)";
+	writeln();
+	Write "b[2] = ";
+	writebool(b[2]);
+	Write " (True expected)";
+	writeln();
+	Write "--- End test07 ---";
+    writeln();
+End test07.

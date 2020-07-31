@@ -1,0 +1,5 @@
+--- Start test13 ---
+printInt: value = 10 (10 expected)
+printInt: value = 50 (50 expected)
+print3: value1 = 20, value2 = 51, bvalue = False (20, 51, False expected)
+--- End test13 ---

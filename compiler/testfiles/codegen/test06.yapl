@@ -1,0 +1,17 @@
+/* CodeGen test input - deeply nested expression 
+ * (requires many registers / stack operands).
+ */
+Program test06
+Declare
+	int k;
+Begin
+    Write "--- Start test06 ---";
+    writeln();
+    k := 1;
+    Write "k*1+(k*1+(k*1+(k*1+(k*1+(k*1+(k*1+(k*1+1))))))) = ";
+    writeint(k*1+(k*1+(k*1+(k*1+(k*1+(k*1+(k*1+(k*1+1))))))));
+    Write " (9 expected)";
+    writeln();
+    Write "--- End test06 ---";
+    writeln();
+End test06.

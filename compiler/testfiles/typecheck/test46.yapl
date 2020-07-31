@@ -1,0 +1,18 @@
+/* Type check test input.
+ * <expected result> ERROR 39 (line 17, column 15)
+ * expression before . is not a record type
+ */
+Program test46
+Declare
+    Record Stat
+        int count;
+        int median;
+    EndRecord;
+
+    Stat stat;
+    int[] a;
+Begin
+    stat.count := 100;
+    writeint(stat.count);
+    writeint(a.median);
+End test46.

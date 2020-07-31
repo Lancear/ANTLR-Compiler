@@ -1,0 +1,15 @@
+/* Type check test input.
+ * <expected result> ERROR 33 (line 12, column 11)
+ * condition is not a boolean expression
+ */
+Program test29
+Declare
+    int k;
+Begin
+    If k > 3 Then 
+        writeint(k);
+    EndIf;
+    While 1 Do
+        Return;
+    EndWhile;
+End test29.

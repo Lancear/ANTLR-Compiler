@@ -1,0 +1,8 @@
+--- Start test11 ---
+(global) a[2] = 5 (5 expected)
+(local)  a[2] = 2 (2 expected)
+(global) x[5] = 10 (10 expected)
+(local)  b[1] = 1 (1 expected)
+(global) a[2] = 5 (5 expected)
+(global) x[5] = 10 (10 expected)
+--- End test11 ---

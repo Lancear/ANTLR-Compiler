@@ -1,0 +1,73 @@
+/* CodeGen test input - 2-dimensional arrays.
+ */
+Program test21
+
+Procedure int[][] createMatrix(int m, int n)
+Declare
+    int i, j;
+    int[][] matrix;
+Begin
+    matrix := new int[m][n];
+    i := 0;
+    While i < m Do
+        j := 0;
+        While j < n Do
+            matrix[i][j] := i*i + j;
+            j := j + 1;
+        EndWhile;
+        i := i + 1;
+    EndWhile;
+    Return matrix;
+End createMatrix;
+ 
+Procedure void printMatrix(int[][] m)
+Declare
+    int i, j;
+Begin
+    i := 0;
+    While i < #m Do
+        j := 0;
+        While j < #m[i] Do
+            Write "  ";
+            writeint(m[i][j]);
+            j := j + 1;
+        EndWhile;
+        writeln();
+        i := i + 1;
+    EndWhile;
+End printMatrix;
+
+Procedure void printTransposed(int[][] m)
+Declare
+    int i, j;
+Begin
+    j := 0;
+    While j < #m[0] Do
+        i := 0;
+        While i < #m Do
+            Write "  ";
+            writeint(m[i][j]);
+            i := i + 1;
+        EndWhile;
+        writeln();
+        j := j + 1;
+    EndWhile;
+End printTransposed;
+
+Declare
+    int[][] m;
+Begin
+    Write "--- Start test21 ---";
+    writeln();
+
+    m := createMatrix(3, 4);
+    Write "Matrix m:";
+    writeln();
+    printMatrix(m);
+    Write "m transposed:";
+    writeln();
+    printTransposed(m);
+
+    Write "--- End test21 ---";
+    writeln();
+End test21.

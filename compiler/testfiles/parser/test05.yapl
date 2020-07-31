@@ -1,0 +1,10 @@
+/* Parser test input.
+ * <expected result> ERROR 3 (line 9, column 12)
+ * parse error: unexpected token '*'
+ */
+Program test05
+Declare
+    int i;
+Begin
+    i := 2**3;
+End test05.

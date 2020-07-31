@@ -1,0 +1,10 @@
+/* Symbol check test input.
+ * <expected result> ERROR 10 (line 8, column 12)
+ * symbol 'k' already declared in current scope (as variable)
+ */
+Program test09
+Declare
+    int k;
+    int m, k;
+Begin
+End test09.

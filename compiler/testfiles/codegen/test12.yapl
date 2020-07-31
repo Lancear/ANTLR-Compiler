@@ -1,0 +1,40 @@
+/* CodeGen test input - procedures without parameters
+ *                      and without Return statements.
+ */
+Program test12
+Declare
+    int m;
+    
+Procedure void printLocal()
+Declare
+    int m;
+Begin
+    m := 100;
+    Write "printLocal: m = ";
+    writeint(m);
+    Write " (100 expected)"; writeln();
+End printLocal;
+
+Procedure void printGlobal()
+Begin
+    Write "printGlobal: m = ";
+    writeint(m);
+End printGlobal;
+
+Begin
+    Write "--- Start test12 ---";
+    writeln();
+    
+    m := 5;
+    printGlobal();
+    Write " (5 expected)"; writeln();
+
+    m := 10;
+    printLocal();
+    
+    printGlobal();
+    Write " (10 expected)"; writeln();
+    
+    Write "--- End test12 ---";
+    writeln();
+End test12.

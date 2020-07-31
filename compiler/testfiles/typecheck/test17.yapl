@@ -1,0 +1,16 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 12, column 9)
+ * type mismatch in assignment
+ */
+Program test17
+
+Procedure void proc(int k, int n, int[] arr)
+Declare
+    int m;
+Begin
+    arr[n] := 17 * k + m;
+    arr := 4;
+End proc;
+
+Begin
+End test17.

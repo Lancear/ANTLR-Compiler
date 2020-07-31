@@ -1,0 +1,18 @@
+/* CodeGen test input - predefined procedures and WriteStatement.
+ */
+Program test03
+Declare
+	Const i = 5;
+	Const b = True;
+Begin
+    Write "--- Start test03 ---";
+    writeln();
+    Write "i = ";
+    writeint(i); 
+    writeln();
+    Write "b = ";
+    writebool(b);
+    writeln();
+    Write "--- End test03 ---";
+    writeln();
+End test03.

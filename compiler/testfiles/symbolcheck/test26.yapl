@@ -1,0 +1,15 @@
+/* Symbol check test input.
+ * <expected result> ERROR 11 (line 12, column 9)
+ * identifier 'Mode' not declared
+ */
+Program test26
+Declare
+    Record Node
+        int id;
+    EndRecord;
+    Record Edge
+        Node from;
+        Mode to;
+    EndRecord;
+Begin
+End test26.

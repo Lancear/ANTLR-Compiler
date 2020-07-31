@@ -1,0 +1,43 @@
+/* CodeGen test input - expressions of primitive data types.
+ */
+Program test05
+Declare
+	Const constant = 10;
+	Const true = True;
+	int k;
+	bool b;
+Begin
+    Write "--- Start test05 ---";
+    writeln();
+    Write "3+4*2 = ";
+    writeint(3+4*2);
+    Write " (11 expected)";
+    writeln();
+	Write "True And False = ";
+	writebool(True And False);
+	Write " (False expected)";
+	writeln();
+	b := true And ((constant == constant-1) Or (3 < 4));
+	Write "b = true And ((constant == constant-1) Or (3 < 4)) = ";
+	writebool(b);
+	Write " (True expected)";
+	writeln();
+	b := False;
+	b := 4 > 3 And 5 >= 5 And -2 <= -1;
+	Write "b = 4 > 3 And 5 >= 5 And -2 <= -1 = ";
+	writebool(b);
+	Write " (True expected)";
+	writeln();
+    k := -(constant % 3) + 11/3*3;
+	Write "k = -(constant % 3) + 11/3*3 = ";
+	writeint(k);
+	Write " (8 expected)";
+	writeln();
+    k := +(k-2)*(k-1);
+	Write "k = +(k-2)*(k-1) = ";
+	writeint(k);
+	Write " (42 expected)";
+	writeln();    
+	Write "--- End test05 ---";
+    writeln();
+End test05.

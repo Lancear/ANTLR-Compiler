@@ -1,0 +1,12 @@
+/* Type check test input.
+ * <expected result> ERROR 21 (line 11, column 13)
+ * array index or dimension is not an integer type
+ */
+Program test08
+Declare
+    int k;
+    int[] a;
+Begin
+    k := a[a[0]];
+    k := a[a];
+End test08.

@@ -1,0 +1,13 @@
+/* Symbol check test input.
+ * <expected result> ERROR 10 (line 9, column 13)
+ * symbol 'id' already declared in current scope (as field)
+ */
+Program test28
+Declare
+    Record Node
+        int id;
+        int id;
+    EndRecord;
+
+Begin
+End test28.

@@ -1,0 +1,8 @@
+--- Start test10 ---
+(global) m = 5 (5 expected)
+(local)  m = 1 (1 expected)
+(global) k = 2 (2 expected)
+(local)  n = 11 (11 expected)
+(global) m = 5 (5 expected)
+(global) k = 2 (2 expected)
+--- End test10 ---

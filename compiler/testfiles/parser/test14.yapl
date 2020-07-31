@@ -1,0 +1,9 @@
+/* Parser test input.
+ * <expected result> ERROR 3 (line 7, column 6)
+   parse error: unexpected token 'new'
+ */
+Program test14
+Declare
+     new int[] vector;
+Begin
+End test14.

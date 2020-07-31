@@ -1,0 +1,14 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 13, column 19)
+ * type mismatch in assignment
+ */
+Program test41
+Declare
+    Const len = 100;
+    int n;
+    int[][] arr;
+Begin
+    arr := new int[len][len];
+    arr[0][1] := arr[0][0] + len * n;
+    arr[len-1][n] := arr[len/2];
+End test41.

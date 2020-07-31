@@ -1,0 +1,17 @@
+/* Symbol check test input.
+ * <expected result> OK
+ */
+Program test13
+
+Procedure void test13(int test13)
+Declare
+    Const test13 = 10;
+Begin
+    Declare
+        int test13;
+    Begin
+    End;
+End test13;
+
+Begin
+End test13.

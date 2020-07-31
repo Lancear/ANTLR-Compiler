@@ -1,0 +1,29 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 28, column 11)
+ * type mismatch in assignment
+ */
+Program test49
+Declare
+    Record Stat1
+        int count;
+        int median;
+    EndRecord;
+    Record Stat2
+        int count;
+        int median;
+    EndRecord;
+    Record Stat3
+        int count;
+        int min;
+        int max;
+    EndRecord;
+
+    Stat1 stat1;
+    Stat2 stat2;
+    Stat3 stat3;
+Begin
+    stat1.count := 100;
+    stat1.median := 0;
+    stat2 := stat1;    /* valid */
+    stat3 := stat1;    /* invalid */
+End test49.

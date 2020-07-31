@@ -1,0 +1,25 @@
+/* Type check test input.
+ * <expected result> ERROR 30 (line 24, column 20)
+ * argument #1 not applicable to procedure printStat
+ */
+Program test48
+Declare
+    Record Stat
+        int count;
+        int median;
+    EndRecord;
+
+Procedure void printStat(Stat statistics)
+Begin
+    writeint(statistics.count);
+    writeint(statistics.median);
+End printStat;
+
+Declare 
+    Stat stat;
+Begin
+    stat.count := 100;
+    stat.median := 0;
+    printStat(stat);
+    printStat(stat.count);
+End test48.

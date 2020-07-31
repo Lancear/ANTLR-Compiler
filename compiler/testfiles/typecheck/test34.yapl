@@ -1,0 +1,11 @@
+/* Type check test input.
+ * <expected result> ERROR 38 (line 10, column 11)
+ * illegal return value in main program
+ */
+Program test34
+Declare
+   int k;
+Begin
+   If k < 3 Then Return; EndIf;
+   Return 10;
+End test34.

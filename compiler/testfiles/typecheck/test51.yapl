@@ -1,0 +1,18 @@
+/* Type check test input.
+ * <expected result> ERROR 41 (line 17, column 18)
+ * invalid type used with 'new'
+ */
+Program test51
+Declare
+    Record List
+        int item;
+        List next;
+    EndRecord;
+
+Declare
+    List list;
+Begin
+    list := new List;
+    list.next := new List;
+    list.item := new int;
+End test51.

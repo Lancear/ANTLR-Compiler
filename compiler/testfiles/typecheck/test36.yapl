@@ -1,0 +1,11 @@
+/* Type check test input.
+ * <expected result> ERROR 25 (line 10, column 15)
+ * non-integer operand types for relational operator <=
+ */
+Program test36
+Declare
+    bool b, c;
+    int n;
+Begin    
+    If n + 10 <= (b Or c) Then EndIf;
+End test36.

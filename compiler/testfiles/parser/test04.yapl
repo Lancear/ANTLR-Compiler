@@ -1,0 +1,10 @@
+/* Parser test input.
+ * <expected result> ERROR 3 (line 7, column 11)
+ * parse error: unexpected token 'Const'
+ */
+Program test04
+
+Procedure Const int[] func()
+Begin End func;
+
+Begin End test04.

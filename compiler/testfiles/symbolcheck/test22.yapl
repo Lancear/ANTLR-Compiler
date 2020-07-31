@@ -1,0 +1,18 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 14, column 5)
+ * illegal use of parameter 'b2'
+ */
+Program test22
+Declare
+    int b;
+
+Procedure bool func(int k, bool b1, bool b2)
+Declare
+    bool b;            /* hides global variable b */
+Begin
+    b := b1 And b2;
+    b2();
+End func;
+
+Begin
+End test22.

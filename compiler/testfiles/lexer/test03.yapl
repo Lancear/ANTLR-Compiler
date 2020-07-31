@@ -1,0 +1,23 @@
+/* Lexer test input
+ * <expected result> ERROR 2 (line 21, column 14)
+ */
+/* test comment: ** / */
+Program test02
+Declare
+    Const len = 10;
+    int[] arr;
+    int r;
+
+Procedure int func(ref int[] arr, int i)
+Begin
+    Return arr[len-1] + i*len;
+End func;
+
+Begin
+    arr := new Integer[len];
+    arr[#arr-1] := 9;
+    r := func(arr, len);
+    Write "program test02: ";
+    writeint(~r);
+    writeln();
+End test02.

@@ -1,0 +1,13 @@
+/* Type check test input.
+ * <expected result> ERROR 30 (line 12, column 18)
+ * argument #3 not applicable to procedure proc
+ */
+Program test22
+
+Procedure void proc(int k, int m)
+Begin
+End proc;
+
+Begin
+    proc(10, 20, 30);
+End test22.

@@ -1,0 +1,8 @@
+/* Parser test input.
+ * <expected result> ERROR 3 (line 7, column 10)
+ * parse error: unexpected token '('
+ */
+Program test06
+Begin
+    Write("program test06: ");
+End test06.

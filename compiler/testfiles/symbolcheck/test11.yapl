@@ -1,0 +1,14 @@
+/* Symbol check test input.
+ * <expected result> ERROR 10 (line 9, column 16)
+ * symbol 'proc' already declared in current scope (as variable)
+ */
+Program test11
+Declare
+    int proc;
+
+Procedure void proc()
+Begin
+End proc;
+
+Begin
+End test11.

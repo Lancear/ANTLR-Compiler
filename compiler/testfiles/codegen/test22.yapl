@@ -1,0 +1,25 @@
+/* CodeGen test input - records.
+ */
+Program test22
+Declare
+    Record Stat
+        int count;
+        int median;
+    EndRecord;
+
+    Stat stat;
+Begin
+    Write "--- Start test22 ---";
+    writeln();
+    stat := new Stat;
+    stat.count := 100;
+    stat.median := 47;
+    Write "count = ";
+    writeint(stat.count);
+    writeln();
+    Write "median = ";
+    writeint(stat.median);
+    writeln();
+    Write "--- End test22 ---";
+    writeln();
+End test22.

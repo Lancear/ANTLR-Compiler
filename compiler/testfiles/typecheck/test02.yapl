@@ -1,0 +1,10 @@
+/* Type check test input.
+ * <expected result> ERROR 24 (line 9, column 12)
+ * illegal operand types for binary operator +
+ */
+Program test02
+Declare
+    int k;
+Begin
+    k := 1 + True;
+End test02.

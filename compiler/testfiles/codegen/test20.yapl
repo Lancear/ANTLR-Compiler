@@ -1,0 +1,61 @@
+/* CodeGen test input - 2-dimensional arrays.
+ */
+Program test20
+Declare
+    int[][] a;
+    bool[][] b;
+Begin
+    Write "--- Start test20 ---";
+    writeln();
+    
+    a := new int[10][20];
+    b := new bool[3][4];
+
+    a[0][9] := 100;
+    a[9][0] := 101;
+    a[9][19] := 102;
+    a[0][0] := 19;
+    a[0][19] := a[0][9] * 2;
+    a[9][9] := a[9][0] + a[9][a[0][0]];
+
+    Write "a[0][0] = ";
+    writeint(a[0][0]);
+    Write " (19 expected)";
+    writeln();
+    Write "a[0][19] = ";
+    writeint(a[0][19]);
+    Write " (200 expected)";
+    writeln();
+    Write "a[9][0] = ";
+    writeint(a[9][0]);
+    Write " (101 expected)";
+    writeln();
+    Write "a[9][9] = ";
+    writeint(a[9][9]);
+    Write " (203 expected)";
+    writeln();
+    Write "a[9][19] = ";
+    writeint(a[9][19]);
+    Write " (102 expected)";
+    writeln();
+    
+    b[1][2] := True;
+    b[2][3] := False;
+    b[2][1] := b[1][2] And b[2][3];
+    
+    Write "b[1][2] = ";
+    writebool(b[1][2]);
+    Write " (True expected)";
+    writeln();
+    Write "b[2][1] = ";
+    writebool(b[2][1]);
+    Write " (False expected)";
+    writeln();
+    Write "b[2][3] = ";
+    writebool(b[2][3]);
+    Write " (False expected)";
+    writeln();
+    
+    Write "--- End test20 ---";
+    writeln();
+End test20.

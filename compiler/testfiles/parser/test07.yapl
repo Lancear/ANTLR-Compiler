@@ -1,0 +1,8 @@
+/* Parser test input.
+ * <expected result> ERROR 3 (line 7, column 5)
+ * parse error: unexpected token 'int'
+ */
+Program test07
+Begin
+    int r;
+End test07.

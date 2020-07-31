@@ -1,0 +1,14 @@
+/* Type check test input.
+ * <expected result> ERROR 37 (line 10, column 15)
+ * illegal return value in procedure proc (not a function)
+ */
+Program test33
+
+Procedure void proc(int k)
+Begin
+   If k < 3 Then Return; EndIf;
+   Return k / 10;
+End proc;
+
+Begin
+End test33.

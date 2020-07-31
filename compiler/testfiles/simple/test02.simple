@@ -1,0 +1,17 @@
+Program test02
+Declare
+    int[] a;
+    int i;
+Begin
+    a := new int[10];
+    i := 0;
+    While i < #a Do
+        a[i] := (i+1)*(i+1);
+        i := i+1;
+    EndWhile;
+    i := 0;
+    While i < #a Do
+        WriteInt a[i];
+        i := i+1;
+    EndWhile;
+End

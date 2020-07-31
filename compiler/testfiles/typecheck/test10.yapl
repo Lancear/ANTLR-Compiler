@@ -1,0 +1,12 @@
+/* Type check test input.
+ * <expected result> ERROR 22 (line 11, column 10)
+ * expression after '#' is not an array type
+ */
+Program test10
+Declare
+    int k, m;
+    int[] a;
+Begin
+    m := #a;
+    k := #m;
+End test10.

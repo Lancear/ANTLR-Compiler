@@ -1,0 +1,12 @@
+/* Type check test input.
+ * <expected result> ERROR 20 (line 11, column 16)
+ * expression before '[' is not an array type
+ * (referring to the second '[' in that line)
+ */
+Program test45
+Declare
+    int n;
+    int[] arr;
+Begin
+    n := arr[1][2];
+End test45.

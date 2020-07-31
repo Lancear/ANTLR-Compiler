@@ -1,0 +1,12 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 11, column 16)
+ * illegal use of constant 'len'
+ */
+Program test17
+Declare
+    Const len = 20;
+    int[] arr;
+
+Begin
+    arr[0] := #len;
+End test17.

@@ -1,0 +1,10 @@
+/* Symbol check test input.
+ * <expected result> ERROR 10 (line 8, column 11)
+ * symbol 'k' already declared in current scope (as variable)
+ */
+Program test08
+Declare
+    int k;
+    Const k = 10;
+Begin
+End test08.

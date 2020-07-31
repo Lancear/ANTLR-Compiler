@@ -1,0 +1,25 @@
+/* Parser test input.
+ * <expected result> ERROR 2 (line 21, column 10)
+ * lexical error: '~' character
+ */
+/* test comment: ** / */
+Program test02
+Declare
+	Const len = 10;
+	int[] arr;
+	int r;
+
+Procedure int func(int[] arr, int i)
+Begin
+	Return arr[len-1] + i*len;
+End func;
+
+Begin
+    arr := new int[len];
+    arr[0] := 10;
+    arr[len-1] := 9;
+    r := ~func(arr, len);
+    Write "program test02: ";
+    writeint(r);
+    writeln();
+End test02.

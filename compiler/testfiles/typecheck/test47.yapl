@@ -1,0 +1,17 @@
+/* Type check test input.
+ * <expected result> ERROR 40 (line 16, column 19)
+ * invalid field medin of record Stat
+ */
+Program test47
+Declare
+    Record Stat
+        int count;
+        int median;
+    EndRecord;
+
+    Stat stat;
+Begin
+    stat.count := 100;
+    writeint(stat.count);
+    writeint(stat.medin);
+End test47.

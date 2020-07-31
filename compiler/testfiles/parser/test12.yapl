@@ -1,0 +1,29 @@
+/* Parser test input - multi-dimensional arrays, array length expressions.
+ * <expected result> OK
+ */
+Program test12
+Procedure int trace(int[][] matrix)
+Declare
+    int i, t;
+Begin
+    t := 0;
+    i := 0;
+    While i < #matrix[0] Do
+        t := t + matrix[i][i];
+        i := i+1;
+    EndWhile;
+    Return t;
+End trace;
+
+Declare
+    Const len = 100;
+    int[][] matrix;
+    int r;
+Begin
+    matrix := new int[len][len];
+    Write "matrix size = ";
+    writeint(#matrix);
+    writeln();
+    Write "trace(matrix) = ";
+    writeint(trace(matrix));
+End test12.

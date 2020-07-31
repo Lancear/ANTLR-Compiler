@@ -1,0 +1,14 @@
+/* Type check test input.
+ * <expected result> ERROR 20 (line 13, column 14)
+ * expression before '[' is not an array type
+ * (refers to the second '[')
+ */
+Program test39
+Declare
+    int k;
+    int[] a;
+    int[][] a2;
+Begin
+    a := a2[1];
+    k := a[0][2];
+End test39.

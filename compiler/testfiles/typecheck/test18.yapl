@@ -1,0 +1,15 @@
+/* Type check test input.
+ * <expected result> ERROR 27 (line 14, column 14)
+ * using procedure proc (not a function) in expression
+ */
+Program test18
+
+Procedure void proc(int n)
+Begin
+    writeint(n);
+End proc;
+
+Begin
+    proc(readint());
+    writeint(proc(10));
+End test18.

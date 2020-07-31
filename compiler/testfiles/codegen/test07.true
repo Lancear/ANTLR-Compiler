@@ -1,0 +1,9 @@
+--- Start test07 ---
+a[0] = 10 (10 expected)
+a[1] = 11 (11 expected)
+a[len-1] = 10 (10 expected)
+a[9] = 10 (10 expected)
+b[0] = True (True expected)
+b[1] = False (False expected)
+b[2] = True (True expected)
+--- End test07 ---

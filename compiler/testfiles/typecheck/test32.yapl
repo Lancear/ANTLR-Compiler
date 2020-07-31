@@ -1,0 +1,13 @@
+/* Type check test input.
+ * <expected result> ERROR 36 (line 9, column 4)
+ * returning none or invalid type from function proc
+ */
+Program test32
+
+Procedure int proc()
+Begin
+   Return;
+End proc;
+
+Begin
+End test32.

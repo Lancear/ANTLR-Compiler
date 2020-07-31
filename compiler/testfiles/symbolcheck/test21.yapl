@@ -1,0 +1,17 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 16, column 5)
+ * illegal use of constant 'writeln'
+ */
+Program test21
+Declare
+    Const writeln = True;       /* hides predefined procedure */
+
+Procedure void writeint(int i)  /* hides predefined procedure */
+Begin
+End writeint;
+
+Begin
+    writebool(writeln);         /* calls predefined procedure */
+    writeint(7);                /* calls user-defined procedure */
+    writeln();
+End test21.

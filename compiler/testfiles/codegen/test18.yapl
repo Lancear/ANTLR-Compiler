@@ -1,0 +1,55 @@
+/* CodeGen test input - procedures with array parameters 
+ *                      and Return statements.
+ */
+Program test18
+    
+Procedure void printArray(int[] a)
+Declare
+    int k, n;
+Begin
+    Write "printArray: ( ";
+    n := #a;
+    k := 0;
+    While k < n Do
+        writeint(a[k]);
+        Write " ";
+        k := k+1;
+    EndWhile;
+    Write ")"; writeln();
+End printArray;
+
+/* Create array of size n */
+Procedure int[] createArray(int n)
+Declare
+    int[] a;
+    int k;
+Begin
+    If n <= 0 Then
+        Return new int[0];
+    EndIf;
+    a := new int[n];
+    k := 0;
+    While k < n Do
+        a[k] := n-k;
+        k := k+1;
+    EndWhile;
+    Return a;
+End createArray;
+
+Declare
+    Const N = 3;
+    int[] a, b, c;
+Begin
+    Write "--- Start test18 ---";
+    writeln();
+    a := createArray(N);
+    b := createArray(N+1);
+    c := createArray(0);
+    printArray(a);
+    printArray(b);
+    b := a;
+    printArray(b);
+    printArray(c);
+    Write "--- End test18 ---";
+    writeln();
+End test18.

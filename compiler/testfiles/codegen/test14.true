@@ -1,0 +1,4 @@
+--- Start test14 ---
+initArray: printArray: ( 5 4 3 2 1 )
+printArray: ( 5 4 3 2 1 )
+--- End test14 ---

@@ -1,0 +1,15 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 14, column 14)
+ * illegal use of procedure func
+ */
+Program test15
+Declare
+    int k;
+
+Procedure void func()
+Begin
+End func;
+
+Begin
+    k := 5 + func;
+End test15.

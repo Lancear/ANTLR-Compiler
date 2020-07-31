@@ -1,0 +1,12 @@
+/* Type check test input.
+ * <expected result> ERROR 24 (line 11, column 19)
+ * illegal operand types for binary operator /
+ */
+Program test38
+Declare
+    Const len = 100;
+    int[] arr;
+    int k, n;
+Begin
+    n := k * -len / arr;
+End test38.

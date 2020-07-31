@@ -1,0 +1,9 @@
+/* Symbol check test input.
+ * <expected result> ERROR 11 (line 8, column 5)
+ * identifier 'r' not declared
+ */
+Program test02
+
+Begin
+    r := 5;
+End test02.

@@ -1,0 +1,11 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 10, column 7)
+ * type mismatch in assignment
+ */
+Program test14
+Declare
+    bool[] a, b;
+Begin
+    a := b;
+    b := a[#a-1];
+End test14.

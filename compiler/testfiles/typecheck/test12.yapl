@@ -1,0 +1,12 @@
+/* Type check test input.
+ * <expected result> ERROR 21 (line 11, column 16)
+ * array index or dimension is not an integer type
+ */
+Program test12
+Declare
+    int[] arr;
+    bool a, b;
+Begin
+    arr := new int[10];
+    arr[a And b] := 2;
+End test12.

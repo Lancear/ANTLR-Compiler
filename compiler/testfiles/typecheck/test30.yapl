@@ -1,0 +1,18 @@
+/* Type check test input.
+ * <expected result> ERROR 35 (line 15, column 1)
+ * missing Return statement in function proc2
+ */
+Program test30
+
+Procedure int proc1(int m)
+Begin
+    Return m % 31;
+End proc1;
+
+Procedure int proc2(int m)
+Begin
+    writeint(m);
+End proc2;
+
+Begin
+End test30.

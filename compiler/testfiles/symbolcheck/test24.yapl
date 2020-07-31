@@ -1,0 +1,36 @@
+/* Symbol check test input.
+ * <expected result> OK
+ */
+Program test24
+Declare
+	Record LinkedList
+	    int key, value;
+	    LinkedList next;
+	EndRecord;
+
+Procedure int sumValues(LinkedList list)
+Declare
+    int sum;
+Begin
+    sum := 0;
+	While list.key >= 0 Do
+	    sum := sum + list.value;
+	    list := list.next;
+	EndWhile;
+	Return sum;
+End sumValues;
+
+Declare
+    LinkedList[] list;
+    int i;
+Begin
+    list := new LinkedList[10];
+    list[0].key := -1;
+    i := 1;
+    While i < #list Do
+        list[i].key := i;
+        list[i].value := i*i;
+        list[i].next := list[i-1];
+    EndWhile;
+	writeint(sumValues(list[#list-1]));
+End test24.

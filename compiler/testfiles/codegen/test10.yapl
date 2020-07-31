@@ -1,0 +1,48 @@
+/* CodeGen test input - local variables of primitive types in main program.
+ */
+Program test10
+Declare
+    int k, m;
+Begin
+    Write "--- Start test10 ---";
+    writeln();
+    
+    Declare
+        int n;
+    Begin
+        m := 5;
+        Write "(global) m = ";
+        writeint(m);
+        Write " (5 expected)";
+        writeln();
+        Declare
+            int m;
+        Begin
+            m := 1;
+            k := 2;
+            n := 11;
+            Write "(local)  m = ";
+            writeint(m);
+            Write " (1 expected)";
+            writeln();
+            Write "(global) k = ";
+            writeint(k);
+            Write " (2 expected)";
+            writeln();
+        End;
+        Write "(local)  n = ";
+        writeint(n);
+        Write " (11 expected)";
+        writeln();
+    End;
+    Write "(global) m = ";
+    writeint(m);
+    Write " (5 expected)";
+    writeln();
+    Write "(global) k = ";
+    writeint(k);
+    Write " (2 expected)";
+    writeln();    
+    Write "--- End test10 ---";
+    writeln();
+End test10.

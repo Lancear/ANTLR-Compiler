@@ -1,0 +1,18 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 17, column 7)
+ * type mismatch in assignment
+ */
+Program test19
+
+Procedure int proc(int k)
+Begin
+    Return k * 3 + 1;
+End proc;
+
+Declare
+    int m, n;
+    bool b;
+Begin
+    m := 5 - proc(n);
+    b := proc(10);
+End test19.

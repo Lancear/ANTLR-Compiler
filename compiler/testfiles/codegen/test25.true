@@ -1,0 +1,11 @@
+--- Start test25 ---
+DataSet: 55 -20 11 -36 -5 
+         count = 5
+         min = -36
+         max = 55
+DataSet: 2 -31 0 -25 6 -27 
+         count = 6
+         min = -31
+         max = 6
+first sample: 55
+--- End test25 ---

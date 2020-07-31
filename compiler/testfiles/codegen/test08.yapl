@@ -1,0 +1,27 @@
+/* CodeGen test input - IfStatement.
+ */
+Program test08
+Declare
+    Const constant = 7;
+Begin
+    Write "--- Start test08 ---";
+    writeln();
+    If constant < constant+1 Then
+        Write "Test A: Then Statement (expected).";
+    Else
+        Write "Test A: Else Statement (NOT expected).";
+    EndIf;
+    writeln();
+    If constant < constant-1 Then
+      Begin
+        Write "Test B: Then Statement (NOT expected).";
+      End;
+    Else
+      Begin
+        Write "Test B: Else Statement (expected).";
+      End;
+    EndIf;
+    writeln();
+    Write "--- End test08 ---";
+    writeln();
+End test08.

@@ -1,0 +1,11 @@
+/* Lexer test input
+ * <expected result> OK
+ */
+Program test
+Declare
+    int r;
+Begin
+    r := 5;
+    Write "r = ";
+    writeint(r);
+End test.

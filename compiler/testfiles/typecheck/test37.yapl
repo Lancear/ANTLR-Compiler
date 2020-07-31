@@ -1,0 +1,10 @@
+/* Type check test input.
+ * <expected result> ERROR 23 (line 9, column 13)
+ * illegal operand type for unary operator +
+ */
+Program test37
+Declare
+    int[] a;
+Begin
+    a[0] := +a;
+End test37.

@@ -1,0 +1,29 @@
+/* Lexer test input
+ * <expected result> OK
+ */
+/* test comment: ** / */
+Program test01
+Declare
+	Const len = 10;
+	int r;
+	bool b;
+
+Procedure int func(int i)
+Declare
+    int r;
+Begin
+    r := 0;
+    While i >= 0 Do
+        r := r + i;
+        i := i - 1;
+    EndWhile;
+	Return r;
+End func;
+
+Begin
+	r := 10;
+	b := func(r) > 2*r;
+	Write "program test02: ";
+	writebool(b);
+	writeln();
+End test01.

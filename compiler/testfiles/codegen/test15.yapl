@@ -1,0 +1,38 @@
+/* CodeGen test input - procedures with call-by-value parameters
+ *                      and with Return statements.
+ */
+Program test15
+
+/* Print value if value >= threshold. */
+Procedure void printIf(int value, int threshold)
+Begin
+    If value < threshold Then
+        Return;
+    EndIf;
+    writeint(value);
+    Write " ";
+End printIf;
+
+Procedure int square(int x)
+Begin
+    Return x*x;
+End square;
+
+Declare
+    Const N = 8;
+    int k, t;
+Begin
+    Write "--- Start test15 ---";
+    writeln();
+    
+    k := 1;
+    t := N*N/4;
+    While k < N Do
+        printIf(square(k), t);
+        k := k+1;
+    EndWhile;
+    Write " (16 25 36 49 expected)"; 
+    writeln();
+    Write "--- End test15 ---";
+    writeln();
+End test15.

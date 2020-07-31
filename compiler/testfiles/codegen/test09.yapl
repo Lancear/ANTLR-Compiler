@@ -1,0 +1,21 @@
+/* CodeGen test input - WhileStatement.
+ */
+Program test09
+Declare
+    Const n = 7;
+    int k;
+Begin
+    Write "--- Start test09 ---";
+    writeln();
+    k := 0;
+    While k < n Do
+        k := k+1;
+        Write "k = ";
+        writeint(k);
+        writeln();
+    EndWhile;
+    Write "(7 iterations expected).";
+    writeln();
+    Write "--- End test09 ---";
+    writeln();
+End test09.

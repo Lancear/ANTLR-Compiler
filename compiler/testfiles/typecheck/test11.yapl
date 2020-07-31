@@ -1,0 +1,11 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 10, column 7)
+ * type mismatch in assignment
+ */
+Program test11
+Declare
+    int k, m, n;
+Begin
+    k := (-m * 3 + 1) % 13;
+    n := k != 0;
+End test11.
