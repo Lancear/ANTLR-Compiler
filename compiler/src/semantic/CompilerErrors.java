@@ -68,43 +68,43 @@ public abstract class CompilerErrors {
 	/* Type check errors */
 	
 	/** Expression before '[' is not an array type. */
-	public static CompilerError SelectorNotArray(String programName, String message, int line, int column) {
-		return new CompilerError(20, programName, message, line, column);
+	public static CompilerError SelectorNotArray(String programName, Token token) {
+		return new CompilerError(20, programName, "expression before ’[’ is not an array type", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Array index or dimension is not an integer type. */
-	public static CompilerError BadArraySelector(String programName, String message, int line, int column) {
-		return new CompilerError(21, programName, message, line, column);
+	public static CompilerError BadArraySelector(String programName, Token token) {
+		return new CompilerError(21, programName, "Array index or dimension is not an integer type", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Expression after '#' is not an array type. */
-	public static CompilerError ArrayLenNotArray(String programName, String message, int line, int column) {
-		return new CompilerError(22, programName, message, line, column);
+	public static CompilerError ArrayLenNotArray(String programName, Token token) {
+		return new CompilerError(22, programName, "Expression after '#' is not an array type", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Illegal operand type for unary operator. */
-	public static CompilerError IllegalOp1Type(String programName, String message, int line, int column) {
-		return new CompilerError(23, programName, message, line, column);
+	public static CompilerError IllegalOp1Type(String programName, String op, Token token) {
+		return new CompilerError(23, programName, "Illegal operand type for unary operator '" + op + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
-	/** Illegal operand type for binary operator. */
-	public static CompilerError IllegalOp2Type(String programName, String message, int line, int column) {
-		return new CompilerError(24, programName, message, line, column);
+	/** Illegal operand types for binary operator. */
+	public static CompilerError IllegalOp2Type(String programName, String op, Token token) {
+		return new CompilerError(24, programName, "Illegal operand types for binary operator '" + op + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Illegal operand type for relational operator. */
-	public static CompilerError IllegalRelOpType(String programName, String message, int line, int column) {
-		return new CompilerError(25, programName, message, line, column);
+	public static CompilerError IllegalRelOpType(String programName, String op, Token token) {
+		return new CompilerError(25, programName, "Illegal operand types for relational operator '" + op + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Illegal operand type for equality operator. */
-	public static CompilerError IllegalEqualOpType(String programName, String message, int line, int column) {
-		return new CompilerError(26, programName, message, line, column);
+	public static CompilerError IllegalEqualOpType(String programName, String op, Token token) {
+		return new CompilerError(26, programName, "Illegal operand types for equality operator '" + op + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Using procedure (not a function) in expression. */
-	public static CompilerError ProcNotFuncExpr(String programName, String message, int line, int column) {
-		return new CompilerError(27, programName, message, line, column);
+	public static CompilerError ProcNotFuncExpr(String programName, String procedure, Token token) {
+		return new CompilerError(27, programName, "Using procedure '" + procedure + "' (not a function) in expression", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Read-only l-value in assignment. */
@@ -113,13 +113,13 @@ public abstract class CompilerErrors {
 	}
 
 	/** Type mismatch in assignment. */
-	public static CompilerError TypeMismatchAssign(String programName, String message, int line, int column) {
-		return new CompilerError(29, programName, message, line, column);
+	public static CompilerError TypeMismatchAssign(String programName, Token token) {
+		return new CompilerError(29, programName, "Type mismatch in assignment", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Argument not applicable to procedure. */
-	public static CompilerError ArgNotApplicable(String programName, String message, int line, int column) {
-		return new CompilerError(30, programName, message, line, column);
+	public static CompilerError ArgNotApplicable(String programName, String procedure, int argNr, Token token) {
+		return new CompilerError(30, programName, "Argument #" + argNr + " not applicable to procedure '" + procedure + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Read-only argument passed to read-write procedure. */
@@ -128,13 +128,13 @@ public abstract class CompilerErrors {
 	}
 
 	/** Too few arguments for procedure. */
-	public static CompilerError TooFewArgs(String programName, String message, int line, int column) {
-		return new CompilerError(32, programName, message, line, column);
+	public static CompilerError TooFewArgs(String programName, String procedure, Token token) {
+		return new CompilerError(32, programName, "Too few arguments for procedure '" + procedure + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Condition is not a boolean expression. */
-	public static CompilerError CondNotBool(String programName, String message, int line, int column) {
-		return new CompilerError(33, programName, message, line, column);
+	public static CompilerError CondNotBool(String programName, Token token) {
+		return new CompilerError(33, programName, "Condition is not a boolean expression", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Readonly not followed by reference type. */
@@ -143,38 +143,38 @@ public abstract class CompilerErrors {
 	} 
 
 	/** Missing return statement in function. */
-	public static CompilerError MissingReturn(String programName, String message, int line, int column) {
-		return new CompilerError(35, programName, message, line, column);
+	public static CompilerError MissingReturn(String programName, String procedure, Token token) {
+		return new CompilerError(35, programName, "Missing return statement in function '" + procedure + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Returning none or invalid type from function. */
-	public static CompilerError InvalidReturnType(String programName, String message, int line, int column) {
-		return new CompilerError(36, programName, message, line, column);
+	public static CompilerError InvalidReturnType(String programName, String procedure, Token token) {
+		return new CompilerError(36, programName, "Returning none or invalid type from function '" + procedure + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Illegal return value in procedure (not a function). */
-	public static CompilerError IllegalRetValProc(String programName, String message, int line, int column) {
-		return new CompilerError(37, programName, message, line, column);
+	public static CompilerError IllegalRetValProc(String programName, String procedure, Token token) {
+		return new CompilerError(37, programName, "illegal return value in procedure '" + procedure + "' (not a function)", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Illegal return value in main program. */
-	public static CompilerError IllegalRetValMain(String programName, String message, int line, int column) {
-		return new CompilerError(38, programName, message, line, column);
+	public static CompilerError IllegalRetValMain(String programName, Token token) {
+		return new CompilerError(38, programName, "Illegal return value in main program", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Expression before '.' is not a record type. */
-	public static CompilerError SelectorNotRecord(String programName, String message, int line, int column) {
-		return new CompilerError(39, programName, message, line, column);
+	public static CompilerError SelectorNotRecord(String programName, Token token) {
+		return new CompilerError(39, programName, "Expression before ’.’ is not a record type ", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** invalid field of record */
-	public static CompilerError InvalidRecordField(String programName, String message, int line, int column) {
-		return new CompilerError(40, programName, message, line, column);
+	public static CompilerError InvalidRecordField(String programName, String field, String record, Token token) {
+		return new CompilerError(40, programName, " invalid field '" + field + "' of record '" + record + "' ", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** invalid type used with 'new' operator */
-	public static CompilerError InvalidNewType(String programName, String message, int line, int column) {
-		return new CompilerError(41, programName, message, line, column);
+	public static CompilerError InvalidNewType(String programName, Token token) {
+		return new CompilerError(41, programName, "invalid type used with ’new’", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 

@@ -15,7 +15,7 @@ returnStatement: 'Return' expression?;
 block: declarationBlock? 'Begin' statement* 'End';
 statement: (assignment | procedureCall | returnStatement | ifStatement | whileStatement | writeStatement | block) ';';
 
-assignment: fullIdentifier ':=' expression;
+assignment: fullIdentifier op=':=' expression;
 selector: ('[' expression ']' | '.' Id) selector?;
 ifStatement: 'If' expression 'Then' statement* ('Else' statement*)? 'EndIf';
 whileStatement: 'While' expression 'Do' statement* 'EndWhile';
@@ -24,7 +24,7 @@ writeStatement: 'Write' String;
 expression: expression  op=(MUL | DIV | MOD) expression #ArithmeticExpr
           | expression  op=(ADD | SUB) expression #ArithmeticExpr
           | expression  op=(LT | LE | GT | GE) expression #Comparison
-          | expression  op=(EQ | NE) expression #Comparison
+          | expression  op=(EQ | NE) expression #EqualityComparison
           | expression  op=AND expression #BooleanExpr
           | expression  op=OR expression #BooleanExpr
           | sign=(ADD | SUB)? primaryExpr #UnaryExpr

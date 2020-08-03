@@ -31,5 +31,9 @@ public class ProcedureSymbol extends Symbol {
   public List<String> getParamTypes() {
     return this.paramTypes;
   }
+
+  public String getParamType(int idx) {
+    return (idx < this.paramTypes.size()) ? this.paramTypes.get(idx) : null;
+  }
   
 }

@@ -10,7 +10,6 @@ import org.antlr.v4.runtime.CommonTokenStream;
 
 import parser.YaplErrorListener;
 import parser.YaplLexer;
-import parser.YaplVisitor;
 import parser.YaplParser;
 import semantic.BlockNameExtractor;
 import semantic.CompilerErrors;

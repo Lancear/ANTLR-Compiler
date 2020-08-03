@@ -1003,6 +1003,7 @@ public class YaplParser extends Parser {
 	}
 
 	public static class AssignmentContext extends ParserRuleContext {
+		public Token op;
 		public FullIdentifierContext fullIdentifier() {
 			return getRuleContext(FullIdentifierContext.class,0);
 		}
@@ -1037,7 +1038,7 @@ public class YaplParser extends Parser {
 			setState(169);
 			fullIdentifier();
 			setState(170);
-			match(T__16);
+			((AssignmentContext)_localctx).op = match(T__16);
 			setState(171);
 			expression(0);
 			}
@@ -1394,8 +1395,6 @@ public class YaplParser extends Parser {
 		public TerminalNode LE() { return getToken(YaplParser.LE, 0); }
 		public TerminalNode GT() { return getToken(YaplParser.GT, 0); }
 		public TerminalNode GE() { return getToken(YaplParser.GE, 0); }
-		public TerminalNode EQ() { return getToken(YaplParser.EQ, 0); }
-		public TerminalNode NE() { return getToken(YaplParser.NE, 0); }
 		public ComparisonContext(ExpressionContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -1455,6 +1454,31 @@ public class YaplParser extends Parser {
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof YaplVisitor ) return ((YaplVisitor<? extends T>)visitor).visitUnaryExpr(this);
+			else return visitor.visitChildren(this);
+		}
+	}
+	public static class EqualityComparisonContext extends ExpressionContext {
+		public Token op;
+		public List<ExpressionContext> expression() {
+			return getRuleContexts(ExpressionContext.class);
+		}
+		public ExpressionContext expression(int i) {
+			return getRuleContext(ExpressionContext.class,i);
+		}
+		public TerminalNode EQ() { return getToken(YaplParser.EQ, 0); }
+		public TerminalNode NE() { return getToken(YaplParser.NE, 0); }
+		public EqualityComparisonContext(ExpressionContext ctx) { copyFrom(ctx); }
+		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof YaplListener ) ((YaplListener)listener).enterEqualityComparison(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof YaplListener ) ((YaplListener)listener).exitEqualityComparison(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof YaplVisitor ) return ((YaplVisitor<? extends T>)visitor).visitEqualityComparison(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -1649,15 +1673,15 @@ public class YaplParser extends Parser {
 						break;
 					case 4:
 						{
-						_localctx = new ComparisonContext(new ExpressionContext(_parentctx, _parentState));
+						_localctx = new EqualityComparisonContext(new ExpressionContext(_parentctx, _parentState));
 						pushNewRecursionContext(_localctx, _startState, RULE_expression);
 						setState(245);
 						if (!(precpred(_ctx, 5))) throw new FailedPredicateException(this, "precpred(_ctx, 5)");
 						setState(246);
-						((ComparisonContext)_localctx).op = _input.LT(1);
+						((EqualityComparisonContext)_localctx).op = _input.LT(1);
 						_la = _input.LA(1);
 						if ( !(_la==EQ || _la==NE) ) {
-							((ComparisonContext)_localctx).op = (Token)_errHandler.recoverInline(this);
+							((EqualityComparisonContext)_localctx).op = (Token)_errHandler.recoverInline(this);
 						}
 						else {
 							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;

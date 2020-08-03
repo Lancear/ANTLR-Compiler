@@ -256,6 +256,18 @@ public class YaplBaseListener implements YaplListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterEqualityComparison(YaplParser.EqualityComparisonContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitEqualityComparison(YaplParser.EqualityComparisonContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterBooleanExpr(YaplParser.BooleanExprContext ctx) { }
 	/**
 	 * {@inheritDoc}

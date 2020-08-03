@@ -216,6 +216,18 @@ public interface YaplListener extends ParseTreeListener {
 	 */
 	void exitUnaryExpr(YaplParser.UnaryExprContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code EqualityComparison}
+	 * labeled alternative in {@link YaplParser#expression}.
+	 * @param ctx the parse tree
+	 */
+	void enterEqualityComparison(YaplParser.EqualityComparisonContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code EqualityComparison}
+	 * labeled alternative in {@link YaplParser#expression}.
+	 * @param ctx the parse tree
+	 */
+	void exitEqualityComparison(YaplParser.EqualityComparisonContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code BooleanExpr}
 	 * labeled alternative in {@link YaplParser#expression}.
 	 * @param ctx the parse tree

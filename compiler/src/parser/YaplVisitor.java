@@ -135,6 +135,13 @@ public interface YaplVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitUnaryExpr(YaplParser.UnaryExprContext ctx);
 	/**
+	 * Visit a parse tree produced by the {@code EqualityComparison}
+	 * labeled alternative in {@link YaplParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitEqualityComparison(YaplParser.EqualityComparisonContext ctx);
+	/**
 	 * Visit a parse tree produced by the {@code BooleanExpr}
 	 * labeled alternative in {@link YaplParser#expression}.
 	 * @param ctx the parse tree

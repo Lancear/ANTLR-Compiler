@@ -157,6 +157,13 @@ public class YaplBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements Y
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitEqualityComparison(YaplParser.EqualityComparisonContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitBooleanExpr(YaplParser.BooleanExprContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
