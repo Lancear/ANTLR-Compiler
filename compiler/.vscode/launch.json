@@ -1,0 +1,23 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Debug (Launch)-Main<compiler_52cc9803>",
+      "request": "launch",
+      "mainClass": "app.Main",
+      "projectName": "compiler_52cc9803",
+      "args": "./testfiles/codegen/test09.yapl ./output/test09"
+    },
+    {
+      "type": "java",
+      "name": "Debug (Launch)-TestRunner<compiler_52cc9803>",
+      "request": "launch",
+      "mainClass": "jvm_class_generator.tests.TestRunner",
+      "projectName": "compiler_52cc9803"
+    }
+  ]
+}

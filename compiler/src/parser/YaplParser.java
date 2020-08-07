@@ -1135,6 +1135,7 @@ public class YaplParser extends Parser {
 	}
 
 	public static class IfStatementContext extends ParserRuleContext {
+		public Token elseThen;
 		public ExpressionContext expression() {
 			return getRuleContext(ExpressionContext.class,0);
 		}
@@ -1196,7 +1197,7 @@ public class YaplParser extends Parser {
 			if (_la==T__21) {
 				{
 				setState(193);
-				match(T__21);
+				((IfStatementContext)_localctx).elseThen = match(T__21);
 				setState(197);
 				_errHandler.sync(this);
 				_la = _input.LA(1);

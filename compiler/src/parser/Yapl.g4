@@ -17,7 +17,7 @@ statement: (assignment | procedureCall | returnStatement | ifStatement | whileSt
 
 assignment: fullIdentifier op=':=' expression;
 selector: ('[' expression ']' | '.' Id) selector?;
-ifStatement: 'If' expression 'Then' statement* ('Else' statement*)? 'EndIf';
+ifStatement: 'If' expression 'Then' statement* (elseThen='Else' statement*)? 'EndIf';
 whileStatement: 'While' expression 'Do' statement* 'EndWhile';
 writeStatement: 'Write' String;
 

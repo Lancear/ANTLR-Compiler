@@ -12,12 +12,13 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.xpath.XPath;
 
-import semantic.CompilerErrors;
-import semantic.BlockNameExtractor;
+import app.CompilerErrors;
+import app.BlockNameExtractor;
 
 public class YaplErrorListener extends BaseErrorListener {
 
   protected BlockNameExtractor extractor;
+  public boolean error = false;
 
   public YaplErrorListener(BlockNameExtractor extractor) {
     this.extractor = extractor;
@@ -32,6 +33,8 @@ public class YaplErrorListener extends BaseErrorListener {
     String msg, 
     RecognitionException ex
   ) {
+    error = true;
+
     if (recognizer instanceof Parser) {
       Parser parser = (Parser)recognizer;
       Token token = (Token)offendingSymbol;

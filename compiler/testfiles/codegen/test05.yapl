@@ -17,7 +17,7 @@ Begin
 	writebool(True And False);
 	Write " (False expected)";
 	writeln();
-	b := true And ((constant == constant-1) Or (3 < 4));
+	b := true And (constant == constant-1) Or (3 < 4);
 	Write "b = true And ((constant == constant-1) Or (3 < 4)) = ";
 	writebool(b);
 	Write " (True expected)";

@@ -1,8 +1,8 @@
 src="./src"
 bin="./bin"
 
-testRunner="tests.TestRunner"
-testRunnerPath="$src/tests/TestRunner.java"
+testRunner="jvm_class_generator.tests.TestRunner"
+testRunnerPath="$src/jvm_class_generator/tests/TestRunner.java"
 
 javac -sourcepath $src -d $bin $testRunnerPath
 java -classpath $bin $testRunner
