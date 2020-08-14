@@ -2,7 +2,9 @@ package jvm_class_generator.impl.attributes;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Stack;
+import java.util.stream.Stream;
 
 import jvm_class_generator.impl.helpers.DynamicByteBuffer;
 import jvm_class_generator.specs.helpers.Descriptor;
@@ -15,11 +17,11 @@ import jvm_class_generator.specs.class_content.Method;
 
 public class Code extends jvm_class_generator.specs.attributes.Code {
 
-  private final Frame currFrame;
+  private Frame currFrame;
   private final Stack<Frame> frames;
 
-  private final HashMap<String, Integer> labels;
-  private final HashMap<Integer, String> jumps;
+  private final LinkedHashMap<String, Integer> labels;
+  private final LinkedHashMap<Integer, String> jumps;
   private final static short BRANCH_PLACEHOLDER = (short)0xdead;
 
   private final static int WIDE_OPCODE = 0xc4;
@@ -37,8 +39,8 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     this.maxLocalsIdx = currFrame.locals.size() - 1;
     this.frames = new Stack<>();
 
-    this.labels = new HashMap<>();
-    this.jumps = new HashMap<>();
+    this.labels = new LinkedHashMap<>();
+    this.jumps = new LinkedHashMap<>();
 
     
     this.code = new DynamicByteBuffer();
@@ -95,6 +97,20 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
   public jvm_class_generator.specs.attributes.Code addLabel(String label) {
     labels.put(label, code.size());
     frames.push(new jvm_class_generator.impl.data_areas.Frame(currFrame, code.size()));
+    return this;
+  }
+
+  public jvm_class_generator.specs.attributes.Code addLabel(String label, String parentLabel) {
+    labels.put(label, code.size());
+
+    if (!labels.containsKey(parentLabel)) 
+        throw new IllegalStateException("Unresolved label: '" + parentLabel + "'");
+
+    int parentCodeOffset = labels.get(parentLabel);
+    Frame parent = Stream.of(frames.toArray(new Frame[frames.size()])).filter(parentFrame -> parentFrame.codeOffset == parentCodeOffset).findFirst().get();
+
+    currFrame = new jvm_class_generator.impl.data_areas.Frame(parent, code.size());
+    frames.push(new jvm_class_generator.impl.data_areas.Frame(parent, code.size()));
     return this;
   }
 
@@ -324,6 +340,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     code.writeByte(opcode);
 
     currFrame.stack.pop();
+    currFrame.stack.push( Descriptor.ARRAY_BASE_DESCRIPTOR( currFrame.stack.pop() ) );
     return this;
   }
 
@@ -332,6 +349,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     code.writeByte(opcode);
 
     currFrame.stack.pop();
+    currFrame.stack.push( Descriptor.ARRAY_BASE_DESCRIPTOR( currFrame.stack.pop() ) );
     return this;
   }
 
@@ -340,6 +358,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     code.writeByte(opcode);
 
     currFrame.stack.pop();
+    currFrame.stack.push( Descriptor.ARRAY_BASE_DESCRIPTOR( currFrame.stack.pop() ) );
     return this;
   }
 
@@ -845,7 +864,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     // objectref
     currFrame.stack.pop();
 
-    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTORS(methodDescriptor);
+    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTOR(methodDescriptor);
     if (!returnDescriptor.equals(Descriptor.VOID))
       currFrame.stack.push(returnDescriptor);
 
@@ -866,7 +885,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     // objectref
     currFrame.stack.pop();
 
-    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTORS(methodDescriptor);
+    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTOR(methodDescriptor);
     if (!returnDescriptor.equals(Descriptor.VOID))
       currFrame.stack.push(returnDescriptor);
 
@@ -884,7 +903,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     for (int counter = 0; counter < Descriptor.METHOD_PARAM_DESCRIPTORS(methodDescriptor).size(); counter++)
       currFrame.stack.pop();
 
-    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTORS(methodDescriptor);
+    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTOR(methodDescriptor);
     if (!returnDescriptor.equals(Descriptor.VOID))
       currFrame.stack.push(returnDescriptor);
     if (currFrame.stack.size() > maxStackSize) maxStackSize = currFrame.stack.size();
@@ -918,6 +937,19 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
 
     currFrame.stack.pop();
     currFrame.stack.push( Descriptor.ARRAY( parent.constantPool().findDescriptorByIndex(id) ) );
+    return this;
+  }
+
+  public jvm_class_generator.specs.attributes.Code multianewArray(int id, int dims) {
+    final int opcode = 0xc5;
+    code.writeByte(opcode);
+    code.writeShort(id);
+    code.writeByte(dims);
+
+    for (int i = 0; i < dims; i++)
+      currFrame.stack.pop();
+      
+    currFrame.stack.push( parent.constantPool().findDescriptorByIndex(id) );
     return this;
   }
 

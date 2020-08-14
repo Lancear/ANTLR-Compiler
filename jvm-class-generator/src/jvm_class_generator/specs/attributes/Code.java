@@ -50,7 +50,22 @@ public abstract class Code extends Attribute {
   public abstract Code addLabel(String label);
 
   /**
+   * Adds a label at the current position in the code.
+   * This label can be used to jump to.
+   * The {@code Frame} is reset to the {@code Frame} of the parentLabel, 
+   * this allows for constructing {@code StackMapTable}s with alternatives
+   * 
+   * @param label ... the name of the label / jump location, <i>must be unique</i>
+   * @param parentLabel ... the name of the parent label to reset the frame to, <i>must be resolved</i>
+   * 
+   * @see jvm_class_generator.specs.attributes.StackMapTable StackMapTable
+   */
+  public abstract Code addLabel(String label, String parentLabel);
+
+  /**
    * Adds the {@code StackMapTable} attribute to this {@code Code} attribute.
+   * 
+   * @see jvm_class_generator.specs.attributes.StackMapTable StackMapTable
    */
   public abstract void addStackMapTableAttribute();
 
@@ -597,6 +612,16 @@ public abstract class Code extends Attribute {
    * @param index ... {@code u2} the index of the {@code ConstClassInfo}
    */
   public abstract Code anewArray(int index);
+
+  /**
+   * Creates a new multidimensional array of references with the given {@code dimensionSizes}, and pushes it onto the {@code operand stack}.
+   * <br><br>
+   * <i>{@code Operand Stack}: ...dimensionSizes -> arrayref</i>
+   * 
+   * @param index ... {@code u2} the index of the {@code ConstClassInfo}, must be an array class type of dimensionality greater than or equal to dimensions
+   * @param dimensions ... {@code u1} the number of dimensions
+   */
+  public abstract Code multianewArray(int index, int dimensions);
 
   /**
    * Gets the length of the given {@code arrayref}.

@@ -7,7 +7,7 @@ import jvm_class_generator.specs.class_content.Method;
 import jvm_class_generator.specs.data_areas.Frame;
 
 /**
- * The {@code InnerClasses} class represents the structure of the JVM {@code InnerClasses} attribute.
+ * The {@code StackMapTable} class represents the structure of the JVM {@code StackMapTable} attribute.
  * 
  * @see 
  * <a href="https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.7.4">

@@ -35,14 +35,22 @@ public class StackMapTable extends jvm_class_generator.specs.attributes.StackMap
   protected byte[] generateStackMapTable() {
     DynamicByteBuffer stackMapTable = new DynamicByteBuffer();
     int currOffset = 0;
+    int idx = 0;
     
     for (Frame frame : frames) {
+      if (frame.codeOffset == 0) {
+        idx++;
+        continue;
+      }
+
       int offsetDelta = frame.codeOffset - currOffset;
       if (offsetDelta < 0)
         throw new IllegalStateException("Labels should be added in order, so the offsets should therefore be ascending!");
 
-      if (offsetDelta == 0)
+      if (idx + 1 < frames.size() && frame.codeOffset == frames.get(idx + 1).codeOffset) {
+        idx++;
         continue;
+      }
 
       nrOfStackMapFrames++;
       if (currOffset != 0) offsetDelta--;
@@ -51,6 +59,7 @@ public class StackMapTable extends jvm_class_generator.specs.attributes.StackMap
       stackMapTable.write( frame.generateFullFrame(offsetDelta) );
       
       currOffset = frame.codeOffset;
+      idx++;
     }
 
     return stackMapTable.toByteArray();

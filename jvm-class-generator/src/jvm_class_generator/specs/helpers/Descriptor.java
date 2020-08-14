@@ -79,6 +79,17 @@ public abstract class Descriptor {
   }
 
   /**
+   * Returns an array descriptor of the given type-descriptor.
+   */
+  public static String ARRAY_BASE_DESCRIPTOR(String arrayDescriptor) {
+    if (!arrayDescriptor.startsWith("["))
+      throw new IllegalArgumentException("The given arrayDescriptor is invalid! No dimensions found!");
+
+    return arrayDescriptor.substring(1);
+  }
+
+
+  /**
    * Returns a method descriptor for the given return and param types.
    */
   public static String METHOD(String returnType, String ...paramTypes) {
@@ -140,7 +151,7 @@ public abstract class Descriptor {
   /**
    * Returns the return-value descriptor of a method descriptor.
    */
-  public static String METHOD_RETURN_DESCRIPTORS(String methodDescriptor) {
+  public static String METHOD_RETURN_DESCRIPTOR(String methodDescriptor) {
     if (!methodDescriptor.startsWith("(") || !methodDescriptor.contains(")"))
       throw new IllegalArgumentException("The given methodDescriptor is invalid! Invalid parameter list!");
 
