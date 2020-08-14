@@ -614,7 +614,7 @@ public abstract class Code extends Attribute {
   public abstract Code anewArray(int index);
 
   /**
-   * Creates a new multidimensional array of references with the given {@code dimensionSizes}, and pushes it onto the {@code operand stack}.
+   * Creates a new multidimensional array with the given {@code dimensionSizes}, and pushes it onto the {@code operand stack}.
    * <br><br>
    * <i>{@code Operand Stack}: ...dimensionSizes -> arrayref</i>
    * 
