@@ -45,17 +45,17 @@ public abstract class CompilerErrors {
 	
 	/** Symbol already declared. */
 	public static CompilerError SymbolExists(String programName, String identifier, String kind, Token token) {
-		return new CompilerError(10, programName, "symbol '" + identifier + "' already declared in the current scope (as " + kind + ")", token.getLine(), token.getCharPositionInLine() + 1);
+		return new CompilerError(10, programName, "Symbol '" + identifier + "' already declared in the current scope (as " + kind + ")", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Identifier not declared. */
 	public static CompilerError IdentNotDecl(String programName, String identifier, Token token) {
-		return new CompilerError(11, programName, "identifier '" + identifier + "' not declared", token.getLine(), token.getCharPositionInLine() + 1);
+		return new CompilerError(11, programName, "Identifier '" + identifier + "' not declared", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Illegal use of symbol. */
 	public static CompilerError SymbolIllegalUse(String programName, String identifier, String kind, Token token) {
-		return new CompilerError(12, programName, "illegal use of " + kind + " '" + identifier + "'", token.getLine(), token.getCharPositionInLine() + 1);
+		return new CompilerError(12, programName, "Illegal use of " + kind + " '" + identifier + "'", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** End identifier does not match program|procedure. */
@@ -67,7 +67,7 @@ public abstract class CompilerErrors {
 	
 	/** Expression before '[' is not an array type. */
 	public static CompilerError SelectorNotArray(String programName, Token token) {
-		return new CompilerError(20, programName, "expression before ’[’ is not an array type", token.getLine(), token.getCharPositionInLine() + 1);
+		return new CompilerError(20, programName, "Expression before ’[’ is not an array type", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Array index or dimension is not an integer type. */
@@ -152,7 +152,7 @@ public abstract class CompilerErrors {
 
 	/** Illegal return value in procedure (not a function). */
 	public static CompilerError IllegalRetValProc(String programName, String procedure, Token token) {
-		return new CompilerError(37, programName, "illegal return value in procedure '" + procedure + "' (not a function)", token.getLine(), token.getCharPositionInLine() + 1);
+		return new CompilerError(37, programName, "Illegal return value in procedure '" + procedure + "' (not a function)", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** Illegal return value in main program. */
@@ -167,12 +167,12 @@ public abstract class CompilerErrors {
 
 	/** invalid field of record */
 	public static CompilerError InvalidRecordField(String programName, String field, String record, Token token) {
-		return new CompilerError(40, programName, " invalid field '" + field + "' of record '" + record + "' ", token.getLine(), token.getCharPositionInLine() + 1);
+		return new CompilerError(40, programName, "Invalid field '" + field + "' of record '" + record + "' ", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 	/** invalid type used with 'new' operator */
 	public static CompilerError InvalidNewType(String programName, Token token) {
-		return new CompilerError(41, programName, "invalid type used with ’new’", token.getLine(), token.getCharPositionInLine() + 1);
+		return new CompilerError(41, programName, "Invalid type used with ’new’", token.getLine(), token.getCharPositionInLine() + 1);
 	}
 
 

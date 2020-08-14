@@ -1,6 +1,6 @@
 package stdlib;
 
-import symboltable.SymbolTable;
+import analysis.SymbolTable;
 
 /**
  * Standard library including {@code Write <string>}, but

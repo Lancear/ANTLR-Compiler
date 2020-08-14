@@ -94,14 +94,14 @@ public class YaplBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements Y
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitAssignment(YaplParser.AssignmentContext ctx) { return visitChildren(ctx); }
+	@Override public T visitStatementList(YaplParser.StatementListContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitSelector(YaplParser.SelectorContext ctx) { return visitChildren(ctx); }
+	@Override public T visitAssignment(YaplParser.AssignmentContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -186,6 +186,20 @@ public class YaplBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements Y
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitFullIdentifier(YaplParser.FullIdentifierContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitSelector(YaplParser.SelectorContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitReturnType(YaplParser.ReturnTypeContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *

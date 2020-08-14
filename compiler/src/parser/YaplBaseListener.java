@@ -148,6 +148,18 @@ public class YaplBaseListener implements YaplListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterStatementList(YaplParser.StatementListContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitStatementList(YaplParser.StatementListContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterAssignment(YaplParser.AssignmentContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -155,18 +167,6 @@ public class YaplBaseListener implements YaplListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitAssignment(YaplParser.AssignmentContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void enterSelector(YaplParser.SelectorContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitSelector(YaplParser.SelectorContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -311,6 +311,30 @@ public class YaplBaseListener implements YaplListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitFullIdentifier(YaplParser.FullIdentifierContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterSelector(YaplParser.SelectorContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitSelector(YaplParser.SelectorContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterReturnType(YaplParser.ReturnTypeContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitReturnType(YaplParser.ReturnTypeContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

@@ -11,8 +11,8 @@ import jvm_class_generator.specs.class_content.Method;
 import jvm_class_generator.specs.data_areas.ConstantPool;
 import jvm_class_generator.specs.helpers.AccessFlags;
 import jvm_class_generator.specs.helpers.Descriptor;
-import symboltable.SymbolTable;
-import symboltable.symbols.ProcedureSymbol;
+import analysis.SymbolTable;
+import analysis.Symbol;
 
 public class JVMStandardLibrary extends StandardLibrary {
   public final static StandardLibrary instance = new JVMStandardLibrary();
@@ -20,12 +20,10 @@ public class JVMStandardLibrary extends StandardLibrary {
 
   @Override
   public void addToSymbolTable(SymbolTable symboltable) {
-    symboltable.openScope(true);
-
-    symboltable.addSymbol( new ProcedureSymbol("writeint", "void", List.of("int"), null) );
-    symboltable.addSymbol( new ProcedureSymbol("writebool", "void", List.of("bool"), null) );
-    symboltable.addSymbol( new ProcedureSymbol("writeln", "void", List.of(), null) );
-    symboltable.addSymbol( new ProcedureSymbol("readint", "int", List.of(), null) );
+    symboltable.add( new Symbol.Function("writeint", "void", List.of(new Symbol.Param("i", "int")), true) );
+    symboltable.add( new Symbol.Function("writebool", "void", List.of(new Symbol.Param("b", "bool")), true) );
+    symboltable.add( new Symbol.Function("writeln", "void", List.of(), true) );
+    symboltable.add( new Symbol.Function("readint", "int", List.of(), true) );
   }
 
   @Override

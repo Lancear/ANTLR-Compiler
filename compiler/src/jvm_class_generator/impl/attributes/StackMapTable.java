@@ -38,6 +38,11 @@ public class StackMapTable extends jvm_class_generator.specs.attributes.StackMap
     int idx = 0;
     
     for (Frame frame : frames) {
+      if (frame.codeOffset == 0) {
+        idx++;
+        continue;
+      }
+
       int offsetDelta = frame.codeOffset - currOffset;
       if (offsetDelta < 0)
         throw new IllegalStateException("Labels should be added in order, so the offsets should therefore be ascending!");

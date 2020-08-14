@@ -1,24 +1,24 @@
 grammar Yapl;
 
-program: 'Program' Id (declarationBlock | procedure)* 'Begin' statement* 'End' Id '.' EOF;
+program: 'Program' Id (declarationBlock | procedure)* 'Begin' statementList 'End' Id '.' EOF;
 
 declarationBlock: 'Declare' (constDeclaration | varDeclaration | recordDeclaration)*;
 constDeclaration: 'Const' Id '=' literal ';';
 varDeclaration: type Id (',' Id)* ';';
 recordDeclaration: 'Record' Id varDeclaration+ 'EndRecord' ';';
 
-procedure: 'Procedure' ('void' | type) Id '(' (param (',' param)*)? ')' block Id ';';
+procedure: 'Procedure' returnType Id '(' (param (',' param)*)? ')' block Id ';';
 param: type Id;
 procedureCall: Id '(' (expression (',' expression)*)? ')';
 returnStatement: 'Return' expression?;
 
-block: declarationBlock? 'Begin' statement* 'End';
+block: declarationBlock? 'Begin' statementList 'End';
 statement: (assignment | procedureCall | returnStatement | ifStatement | whileStatement | writeStatement | block) ';';
+statementList: statement*;
 
 assignment: fullIdentifier op=':=' expression;
-selector: ('[' expression ']' | '.' Id) selector?;
-ifStatement: 'If' expression 'Then' statement* (elseThen='Else' statement*)? 'EndIf';
-whileStatement: 'While' expression 'Do' statement* 'EndWhile';
+ifStatement: 'If' expression 'Then' statementList ('Else' elseStatementList=statementList)? 'EndIf';
+whileStatement: 'While' expression 'Do' statementList 'EndWhile';
 writeStatement: 'Write' String;
 
 expression: expression  op=(MUL | DIV | MOD) expression #ArithmeticExpr
@@ -40,7 +40,9 @@ primaryExpr : literal
 
 arrayLength : '#' fullIdentifier;
 fullIdentifier: Id selector?;
+selector: ('[' expression ']' | '.' Id) selector?;
 
+returnType: 'void' | type;
 type : baseType ('[' ']')*;
 baseType : 'int' | 'bool' | Id;
 literal: Boolean | Number;

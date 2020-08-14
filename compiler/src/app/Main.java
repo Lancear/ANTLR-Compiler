@@ -7,22 +7,26 @@ import java.nio.file.Paths;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import parser.YaplErrorListener;
-import parser.YaplLexer;
-import parser.YaplParser;
-import semantic.SemanticChecker;
+import analysis.Analysis;
 import app.CompilerErrors.CompilerError;
 import codegen.CodeGenerator;
 import codegen.JvmBackend;
+import parser.YaplErrorListener;
+import parser.YaplLexer;
+import parser.YaplParser;
+// import semantic.SemanticChecker;
+// import app.CompilerErrors.CompilerError;
+// import codegen.CodeGenerator;
+// import codegen.JvmBackend;
 import stdlib.JVMStandardLibrary;
 
 
 public class Main {
   
   public static void main(String[] args) {
-    BlockNameExtractor blockNameExtractor = new BlockNameExtractor();
-    YaplErrorListener errorListener = new YaplErrorListener(blockNameExtractor);
+    YaplErrorListener errorListener = new YaplErrorListener();
 
     try {
       if (args.length < 1)
@@ -53,30 +57,32 @@ public class Main {
       YaplParser parser = new YaplParser(tokens);
       parser.removeErrorListeners();
       parser.addErrorListener(errorListener);
-      blockNameExtractor.setParser(parser);
+      parser.addParseListener(errorListener);
       YaplParser.ProgramContext tree = parser.program();
       
       if (!errorListener.error)
-        System.out.println("YAPL compilation: [" + blockNameExtractor.programName + "] OK");
+        System.out.println("YAPL compilation: [" + errorListener.programName + "] OK");
+      else
+        return;
 
-      // semantics
-      SemanticChecker visitor = new SemanticChecker(blockNameExtractor, JVMStandardLibrary.instance);
-      visitor.visit(tree);
+      // semantic analysis
+      Analysis analysis = new Analysis(parser, JVMStandardLibrary.instance);
+      ParseTreeWalker.DEFAULT.walk(new parser.DetailedYaplListenerAdapter(analysis), tree);
 
-      for (CompilerError error : visitor.errors) {
+      for (CompilerError error : analysis.errors) {
         System.err.println( error );
         System.err.println();
       }
 
       // terminate the compiler if an error occured
-      if (errorListener.error || visitor.errors.size() != 0) return;
+      if (analysis.errors.size() != 0) return;
 
       // code generation
-      CodeGenerator codegen = new CodeGenerator(JVMStandardLibrary.instance, args[1], JvmBackend.instance);
+      CodeGenerator codegen = new CodeGenerator(JVMStandardLibrary.instance, analysis.symbolTable, args[1], JvmBackend.instance);
       codegen.visit(tree);
     }
     catch (IOException ex) {
-      System.err.println( CompilerErrors.Lexical(blockNameExtractor.programName, ex.getLocalizedMessage(), 0, 0) );
+      System.err.println( CompilerErrors.Lexical(errorListener.programName, ex.getLocalizedMessage(), 0, 0) );
       System.err.println();
     }
     // catch (Exception ex) {

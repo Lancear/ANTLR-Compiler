@@ -77,17 +77,17 @@ public interface YaplVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitStatement(YaplParser.StatementContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link YaplParser#statementList}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitStatementList(YaplParser.StatementListContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link YaplParser#assignment}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitAssignment(YaplParser.AssignmentContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link YaplParser#selector}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitSelector(YaplParser.SelectorContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link YaplParser#ifStatement}.
 	 * @param ctx the parse tree
@@ -166,6 +166,18 @@ public interface YaplVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitFullIdentifier(YaplParser.FullIdentifierContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link YaplParser#selector}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSelector(YaplParser.SelectorContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link YaplParser#returnType}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitReturnType(YaplParser.ReturnTypeContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link YaplParser#type}.
 	 * @param ctx the parse tree

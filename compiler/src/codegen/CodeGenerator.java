@@ -2,46 +2,19 @@ package codegen;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+
 import java.util.List;
-import java.util.Stack;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import analysis.Symbol;
+import analysis.SymbolTable;
 import parser.YaplBaseVisitor;
-import parser.YaplParser;
-import parser.YaplParser.ArithmeticExprContext;
-import parser.YaplParser.ArrayLengthContext;
-import parser.YaplParser.AssignmentContext;
-import parser.YaplParser.BlockContext;
-import parser.YaplParser.BooleanExprContext;
-import parser.YaplParser.ComparisonContext;
-import parser.YaplParser.ConstDeclarationContext;
-import parser.YaplParser.CreationExprContext;
-import parser.YaplParser.EqualityComparisonContext;
-import parser.YaplParser.ExpressionContext;
-import parser.YaplParser.FullIdentifierContext;
-import parser.YaplParser.IfStatementContext;
-import parser.YaplParser.LiteralContext;
-import parser.YaplParser.ParamContext;
-import parser.YaplParser.ProcedureCallContext;
-import parser.YaplParser.ProcedureContext;
-import parser.YaplParser.ProgramContext;
-import parser.YaplParser.SelectorContext;
-import parser.YaplParser.StatementContext;
-import parser.YaplParser.UnaryExprContext;
-import parser.YaplParser.VarDeclarationContext;
-import parser.YaplParser.WhileStatementContext;
-import parser.YaplParser.WriteStatementContext;
+import parser.YaplParser.*;
 import stdlib.StandardLibrary;
-import symboltable.SymbolTable;
-import symboltable.symbols.ConstSymbol;
-import symboltable.symbols.ProcedureSymbol;
-import symboltable.symbols.Symbol;
-import symboltable.symbols.VariableSymbol;
 
-public class CodeGenerator extends YaplBaseVisitor<CodeGenInfo> {
+public class CodeGenerator extends YaplBaseVisitor<Symbol> {
 
   protected final static String INT = "int";
   protected final static String BOOL = "bool";
@@ -49,40 +22,38 @@ public class CodeGenerator extends YaplBaseVisitor<CodeGenInfo> {
 
   protected SymbolTable symboltable = null;
   protected Backend backend = null;
-  protected boolean isLhs = false;
-  protected boolean isArrayElement = false;
-  protected Stack<Symbol> selectedSymbol = new Stack<>();
 
-  public CodeGenerator(StandardLibrary stdlib, String outputDir, Backend backend) {
-    this.symboltable = new SymbolTable();
-    stdlib.addToSymbolTable(symboltable);
+  public CodeGenerator(StandardLibrary stdlib, SymbolTable symbolTable, String outputDir, Backend backend) {
+    backend.stdlib = stdlib;
+    this.symboltable = symbolTable;
+    
+    symbolTable.resetCursor();
+    symbolTable.add( new Symbol.Function("write", "void", List.of(new Symbol.Param("str", "string")), true) );
 
     this.backend = backend;
-    backend.stdlib = stdlib;
     backend.symbolTable = symboltable;
     backend.outputDir = Paths.get(outputDir);
   }
 
   @Override
-  public CodeGenInfo visitProgram(ProgramContext ctx) {
-    backend.enterProgram( ctx.Id(0).getText() );
+  public Symbol visitProgram(ProgramContext ctx) {
+    final String name = ctx.Id(0).getText();
+
+    backend.enterProgram(name);
+    symboltable.enterScope();
     
     // Declarations and Procedures
     for (ParseTree child : ctx.children) {
-      if (child instanceof StatementContext)
-        break;
-
+      if (child instanceof StatementListContext) break;
       visit(child);
     }
 
     // Main method
     backend.enterMainFunction();
-
-    for (StatementContext stat : ctx.statement()) {
-      visit(stat);
-    }
-
+    visitStatementList( ctx.statementList() );
     backend.exitMainFunction();
+
+    symboltable.exitScope();
 
     try {
       backend.exitProgram();
@@ -95,249 +66,291 @@ public class CodeGenerator extends YaplBaseVisitor<CodeGenInfo> {
   }
 
   @Override
-  public CodeGenInfo visitProcedure(ProcedureContext ctx) {
-    final String returnType = (ctx.type() != null) ? visitType( ctx.type() ).type : "void";
-    final ProcedureSymbol symbol = new ProcedureSymbol(ctx.Id(0).getText(), returnType, ctx.start);
-
-    final List<String> paramTypes = new ArrayList<>();
-    for (ParamContext param : ctx.param()) {
-      final CodeGenInfo info = visitParam(param);
-      paramTypes.add(info.type);
+  public Symbol visitStatementList(StatementListContext ctx) {
+    for (StatementContext stat : ctx.statement()) {
+      visitStatement(stat);
     }
 
-    symbol.setParamTypes(paramTypes);
-
-    backend.enterFunction(symbol);
-    visitBlock(ctx.block());
-    backend.exitFunction();
     return null;
   }
 
   @Override
-  public CodeGenInfo visitParam(ParamContext ctx) {
-    return new CodeGenInfo(ctx.type().getText());
-  }
+  public Symbol visitWriteStatement(WriteStatementContext ctx) {
+    final String stringLiteral = ctx.String().getText();
+    final String value = stringLiteral.substring(1, stringLiteral.length() - 1);
 
-  @Override
-  public CodeGenInfo visitWriteStatement(WriteStatementContext ctx) {
-    String str = ctx.String().toString();
-    String strWithoutQuotes = str.substring( 1, str.length() - 1 );
-    
     backend
-      .loadConstant(strWithoutQuotes, STRING)
-      .callFunction("write");
+      .loadConstant( new Symbol.Const("<literal>", "string", value) )
+      .callFunction( symboltable.get("write").asFunction() );
+
     return null;
   }
 
   @Override
-  public CodeGenInfo visitProcedureCall(ProcedureCallContext ctx) {
-    for (ExpressionContext expr : ctx.expression()) {
+  public Symbol visitProcedureCall(ProcedureCallContext ctx) {
+    final String fnName = ctx.Id().getText();
+
+    for (ExpressionContext expr : ctx.expression())
       visit(expr);
-    }
 
-    backend.callFunction(ctx.Id().getText());
+    backend
+      .callFunction( symboltable.get(fnName).asFunction() );
+
     return null;
   }
 
   @Override
-  public CodeGenInfo visitLiteral(LiteralContext ctx) {
-    if (ctx.Boolean() != null) {
-      backend.loadConstant(ctx.Boolean().getText(), BOOL);
-      return new CodeGenInfo(ctx.Boolean().getText(), BOOL);
-    }
-    else {
-      backend.loadConstant(ctx.Number().getText(), INT);
-      return new CodeGenInfo(ctx.Number().getText(), INT);
-    }
+  public Symbol visitLiteral(LiteralContext ctx) {
+    final Symbol.Const sym = (ctx.Boolean() != null) 
+      ? new Symbol.Const("<literal>", "bool", ctx.Boolean().getText())
+      : new Symbol.Const("<literal>", "int", ctx.Number().getText());
+
+
+    if (!(ctx.getParent() instanceof ConstDeclarationContext))
+      backend.loadConstant(sym);
+
+    return sym;
   }
 
   @Override
-  public CodeGenInfo visitConstDeclaration(ConstDeclarationContext ctx) {
-    String type = (ctx.literal().Boolean() != null) ? BOOL : INT;
-    Symbol symbol = new ConstSymbol(ctx.Id().getText(), type, ctx.literal().getText(), ctx.start);
-    symboltable.addSymbol(symbol);
-    return new CodeGenInfo(symbol);
-  }
-
-  @Override
-  public CodeGenInfo visitVarDeclaration(VarDeclarationContext ctx) {
-    String type = ctx.type().getText();
-
+  public Symbol visitVarDeclaration(VarDeclarationContext ctx) {
     for (TerminalNode id : ctx.Id()) {
-      VariableSymbol symbol = new VariableSymbol(id.getText(), type, false, id.getSymbol());
-      symboltable.addSymbol(symbol);
-      backend.allocLocal(symbol);
+      final String name = id.getText();
+      final Symbol.Variable sym = symboltable.get(name).asVariable();
+
+      backend.allocVariable(sym);
     }
 
-    return new CodeGenInfo(type);
-  }
-
-  @Override
-  public CodeGenInfo visitAssignment(AssignmentContext ctx) {
-    isArrayElement = false;
-    isLhs = true;
-    VariableSymbol symbol = (VariableSymbol)visitFullIdentifier(ctx.fullIdentifier()).symbol;
-    isLhs = false;
-    visit(ctx.expression());
-
-    backend.store(symbol, isArrayElement);
     return null;
   }
 
-  @Override
-  public CodeGenInfo visitUnaryExpr(UnaryExprContext ctx) {
-    CodeGenInfo expr = visit(ctx.primaryExpr());
-    
-    if (ctx.sign != null) 
-      backend.op1(ctx.sign.getText());
-
-    return new CodeGenInfo(expr != null ? expr.type : null);
-  }
+  protected boolean isAssignedTo = false;
 
   @Override
-  public CodeGenInfo visitArithmeticExpr(ArithmeticExprContext ctx) {
-    CodeGenInfo lhs = visit(ctx.expression(0));
-    CodeGenInfo rhs = visit(ctx.expression(1));
-    CodeGenInfo info = new CodeGenInfo(INT);
-    
-    backend.op2(ctx.op.getText());
-    return info;
-  }
+  public Symbol visitFullIdentifier(FullIdentifierContext ctx) {
+    final String name = ctx.Id().getText();
+    Symbol sym = symboltable.get(name);
 
-  @Override
-  public CodeGenInfo visitBooleanExpr(BooleanExprContext ctx) {
-    if (!(ctx.expression(0) instanceof BooleanExprContext))
-      backend.op2(ctx.op.getText());
-
-    CodeGenInfo lhs = visit(ctx.expression(0));
-
-    if (ctx.expression(0) instanceof BooleanExprContext)
-      backend.op2(ctx.op.getText());
-
-    CodeGenInfo rhs = visit(ctx.expression(1));
-    CodeGenInfo info = new CodeGenInfo(BOOL);    
-    return info;
-  }
-
-  @Override
-  public CodeGenInfo visitComparison(ComparisonContext ctx) {
-    backend.startCompareOp();
-    CodeGenInfo lhs = visit(ctx.expression(0));
-    CodeGenInfo rhs = visit(ctx.expression(1));
-    CodeGenInfo info = new CodeGenInfo(BOOL);
-    
-    backend.compareOp(ctx.op.getText());
-    return info;
-  }
-
-  @Override
-  public CodeGenInfo visitEqualityComparison(EqualityComparisonContext ctx) {
-    backend.startCompareOp();
-    CodeGenInfo lhs = visit(ctx.expression(0));
-    CodeGenInfo rhs = visit(ctx.expression(1));
-    CodeGenInfo info = new CodeGenInfo(BOOL);
-    
-    backend.compareOp(ctx.op.getText());
-    return info;
-  }
-
-  @Override
-  public CodeGenInfo visitFullIdentifier(FullIdentifierContext ctx) {
-    selectedSymbol.push(symboltable.get(ctx.Id().getText()));
-
-    if (selectedSymbol.peek() instanceof ConstSymbol) {
-      ConstSymbol constSymbol = (ConstSymbol)selectedSymbol.peek();
-      backend.loadConstant(constSymbol.value, constSymbol.type);
-      selectedSymbol.pop();
-      return new CodeGenInfo(constSymbol.type, constSymbol.value);
-    }
-
-    if (!isLhs || ctx.selector() != null) {
-      backend.load((VariableSymbol)selectedSymbol.peek(), false);
+    if (sym.isConst()) {
+      backend.loadConstant( sym.asConst() );
+      return sym;
     }
 
     if (ctx.selector() != null) {
-      isArrayElement = true;
-      return visit(ctx.selector());
+      backend.load( sym.asVariable() );
+      sym = visitSelector(ctx.selector(), sym.asVariable());
     }
 
-    return new CodeGenInfo(selectedSymbol.pop());
+    if (!isAssignedTo) {
+      backend.load( sym.asVariable() );
+    }
+
+    return sym;
   }
 
-  @Override
-  public CodeGenInfo visitSelector(SelectorContext ctx) {
-    boolean lhs = isLhs;
-    isLhs = false;
+  public Symbol visitSelector(SelectorContext ctx, Symbol.Variable sym) {
+    boolean wasAssignedTo = isAssignedTo;
+    isAssignedTo = false;
     visit(ctx.expression());
-    isLhs = lhs;
-
-    if (!isLhs || ctx.selector() != null) {
-      backend.load((VariableSymbol)selectedSymbol.peek(), isArrayElement);
-    }
-
-    return new CodeGenInfo(selectedSymbol.peek());
+    isAssignedTo = wasAssignedTo;
+    return sym.selectElement();
   }
 
   @Override
-  public CodeGenInfo visitCreationExpr(CreationExprContext ctx) {
-    if (ctx.expression().size() == 1) {
-      visit(ctx.expression(0));
-      backend.newArray(ctx.baseType().getText());
+  public Symbol visitAssignment(AssignmentContext ctx) {
+    isAssignedTo = true;
+    final Symbol.Variable sym = visitFullIdentifier( ctx.fullIdentifier() ).asVariable();
+    isAssignedTo = false;
+
+    System.out.println(ctx.getText() + " (sym.isLocal: " + sym.isLocal + ")");
+
+    visit(ctx.expression());
+    backend.store(sym);
+    return null;
+  }
+
+  @Override
+  public Symbol visitUnaryExpr(UnaryExprContext ctx) {
+    visitPrimaryExpr(ctx.primaryExpr());
+
+    if (ctx.sign != null) {
+      final String op = ctx.sign.getText();
+      backend.op1(op);
     }
 
     return null;
   }
 
   @Override
-  public CodeGenInfo visitArrayLength(ArrayLengthContext ctx) {
-    visit(ctx.fullIdentifier());
+  public Symbol visitPrimaryExpr(PrimaryExprContext ctx) {
+    if (ctx.literal() != null) visitLiteral(ctx.literal());
+    else if (ctx.fullIdentifier() != null) visitFullIdentifier(ctx.fullIdentifier());
+    else if (ctx.procedureCall() != null) visitProcedureCall(ctx.procedureCall());
+    else if (ctx.arrayLength() != null) visitArrayLength(ctx.arrayLength());
+    else if (ctx.expression() != null) visit(ctx.expression());
+    return null;
+  }
+
+  @Override
+  public Symbol visitArithmeticExpr(ArithmeticExprContext ctx) {
+    visit(ctx.expression(0));
+    visit(ctx.expression(1));
+    
+    final String op = ctx.op.getText();
+    backend.op2(op);
+    return null;
+  }
+
+  protected boolean isBoolExpr = false;
+
+  @Override
+  public Symbol visitComparison(ComparisonContext ctx) {
+    boolean isBoolRoot = !isBoolExpr;
+
+    if (isBoolRoot) {
+      backend.start();
+      isBoolExpr = true;
+    }
+
+    visit(ctx.expression(0));
+    visit(ctx.expression(1));
+    
+    final String op = ctx.op.getText();
+    backend.op2(op);
+
+    if (isBoolRoot) {
+      backend.end();
+      isBoolExpr = false;
+    }
+
+    return null;
+  }
+
+  @Override
+  public Symbol visitEqualityComparison(EqualityComparisonContext ctx) {
+    boolean isBoolRoot = !isBoolExpr;
+
+    if (isBoolRoot) {
+      backend.start();
+      isBoolExpr = true;
+    }
+
+    visit(ctx.expression(0));
+    visit(ctx.expression(1));
+    
+    final String op = ctx.op.getText();
+    backend.op2(op);
+
+    if (isBoolRoot) {
+      backend.end();
+      isBoolExpr = false;
+    }
+    
+    return null;
+  }
+
+  @Override
+  public Symbol visitBooleanExpr(BooleanExprContext ctx) {
+    boolean isBoolRoot = !isBoolExpr;
+
+    if (isBoolRoot) {
+      backend.start();
+      isBoolExpr = true;
+    }
+
+    final String op = ctx.op.getText();
+    if (!(ctx.expression(0) instanceof BooleanExprContext || ctx.expression(1) instanceof BooleanExprContext)) {
+      backend.op2(op);
+      visit(ctx.expression(0));
+      visit(ctx.expression(1));
+    }
+    else {
+      visit(ctx.expression(0));
+      backend.op2(op);
+      visit(ctx.expression(1));
+    }
+
+    if (isBoolRoot) {
+      backend.end();
+      isBoolExpr = false;
+    }
+
+    return null;
+  }
+
+  @Override
+  public Symbol visitCreationExpr(CreationExprContext ctx) {
+    for(ExpressionContext expr : ctx.expression())
+      visit(expr);
+
+    final String baseType = ctx.baseType().getText();
+    backend.newArray(baseType);
+    return null;
+  }
+
+  @Override
+  public Symbol visitArrayLength(ArrayLengthContext ctx) {
+    visitFullIdentifier(ctx.fullIdentifier());
     backend.arraylength();
     return null;
   }
 
   @Override
-  public CodeGenInfo visitIfStatement(IfStatementContext ctx) {
+  public Symbol visitIfStatement(IfStatementContext ctx) {
+    backend.start();
     visit(ctx.expression());
-    backend.ifThen();
+    backend.branch();
+    visitStatementList(ctx.statementList(0));
 
-    boolean elseStat = false;
-    for (StatementContext stat : ctx.statement()) {
-      if (!elseStat && stat.start.getTokenIndex() > ctx.elseThen.getTokenIndex()) {
-        elseStat = true;
-        backend.elseThen();
-      }
-
-      visit(stat);
+    if (ctx.elseStatementList != null) {
+      backend.elseBranch();
+      visitStatementList(ctx.elseStatementList);
     }
 
-    backend.endIf();
+    backend.end();
     return null;
   }
 
   @Override
-  public CodeGenInfo visitWhileStatement(WhileStatementContext ctx) {
-    backend.startWhile();
+  public Symbol visitWhileStatement(WhileStatementContext ctx) {
+    backend.start();
     visit(ctx.expression());
-    backend.whileDo();
-
-    for (StatementContext stat : ctx.statement()) {
-      visit(stat);
-    }
-
-    backend.endWhile();
+    backend.branch();
+    visitStatementList(ctx.statementList());
+    backend.loop();
+    backend.end();
     return null;
   }
 
   @Override
-  public CodeGenInfo visitBlock(BlockContext ctx) {
-    backend.startBlock();
+  public Symbol visitBlock(BlockContext ctx) {
+    symboltable.enterScope();
 
-    visitDeclarationBlock(ctx.declarationBlock());
-    for (StatementContext stat : ctx.statement()) {
-      visit(stat);
-    }
+    if (ctx.declarationBlock() != null)
+      visitDeclarationBlock(ctx.declarationBlock());
 
-    backend.endBlock();
+    visitStatementList(ctx.statementList());
+    symboltable.exitScope();
+    return null;
+  }
+
+  @Override
+  public Symbol visitProcedure(ProcedureContext ctx) {
+    final String name = ctx.Id(0).getText();
+    backend.enterFunction(symboltable.get(name).asFunction());
+    symboltable.enterScope();
+    visitBlock(ctx.block());
+    symboltable.exitScope();
+    backend.exitFunction();
+    return null;
+  }
+
+  @Override
+  public Symbol visitReturnStatement(ReturnStatementContext ctx) {
+    if (ctx.expression() != null)
+      visit(ctx.expression());
+    
+    backend.returnFunction();
     return null;
   }
 

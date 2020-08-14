@@ -340,6 +340,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     code.writeByte(opcode);
 
     currFrame.stack.pop();
+    currFrame.stack.push( Descriptor.ARRAY_BASE_DESCRIPTOR( currFrame.stack.pop() ) );
     return this;
   }
 
@@ -348,6 +349,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     code.writeByte(opcode);
 
     currFrame.stack.pop();
+    currFrame.stack.push( Descriptor.ARRAY_BASE_DESCRIPTOR( currFrame.stack.pop() ) );
     return this;
   }
 
@@ -356,6 +358,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     code.writeByte(opcode);
 
     currFrame.stack.pop();
+    currFrame.stack.push( Descriptor.ARRAY_BASE_DESCRIPTOR( currFrame.stack.pop() ) );
     return this;
   }
 
@@ -861,7 +864,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     // objectref
     currFrame.stack.pop();
 
-    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTORS(methodDescriptor);
+    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTOR(methodDescriptor);
     if (!returnDescriptor.equals(Descriptor.VOID))
       currFrame.stack.push(returnDescriptor);
 
@@ -882,7 +885,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     // objectref
     currFrame.stack.pop();
 
-    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTORS(methodDescriptor);
+    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTOR(methodDescriptor);
     if (!returnDescriptor.equals(Descriptor.VOID))
       currFrame.stack.push(returnDescriptor);
 
@@ -900,7 +903,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     for (int counter = 0; counter < Descriptor.METHOD_PARAM_DESCRIPTORS(methodDescriptor).size(); counter++)
       currFrame.stack.pop();
 
-    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTORS(methodDescriptor);
+    String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTOR(methodDescriptor);
     if (!returnDescriptor.equals(Descriptor.VOID))
       currFrame.stack.push(returnDescriptor);
     if (currFrame.stack.size() > maxStackSize) maxStackSize = currFrame.stack.size();

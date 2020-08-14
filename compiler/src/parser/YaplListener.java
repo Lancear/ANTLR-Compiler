@@ -118,6 +118,16 @@ public interface YaplListener extends ParseTreeListener {
 	 */
 	void exitStatement(YaplParser.StatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link YaplParser#statementList}.
+	 * @param ctx the parse tree
+	 */
+	void enterStatementList(YaplParser.StatementListContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link YaplParser#statementList}.
+	 * @param ctx the parse tree
+	 */
+	void exitStatementList(YaplParser.StatementListContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link YaplParser#assignment}.
 	 * @param ctx the parse tree
 	 */
@@ -127,16 +137,6 @@ public interface YaplListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitAssignment(YaplParser.AssignmentContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link YaplParser#selector}.
-	 * @param ctx the parse tree
-	 */
-	void enterSelector(YaplParser.SelectorContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link YaplParser#selector}.
-	 * @param ctx the parse tree
-	 */
-	void exitSelector(YaplParser.SelectorContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link YaplParser#ifStatement}.
 	 * @param ctx the parse tree
@@ -269,6 +269,26 @@ public interface YaplListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitFullIdentifier(YaplParser.FullIdentifierContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link YaplParser#selector}.
+	 * @param ctx the parse tree
+	 */
+	void enterSelector(YaplParser.SelectorContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link YaplParser#selector}.
+	 * @param ctx the parse tree
+	 */
+	void exitSelector(YaplParser.SelectorContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link YaplParser#returnType}.
+	 * @param ctx the parse tree
+	 */
+	void enterReturnType(YaplParser.ReturnTypeContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link YaplParser#returnType}.
+	 * @param ctx the parse tree
+	 */
+	void exitReturnType(YaplParser.ReturnTypeContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link YaplParser#type}.
 	 * @param ctx the parse tree

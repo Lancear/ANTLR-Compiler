@@ -3,10 +3,10 @@ package codegen;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+import analysis.Symbol;
 import jvm_class_generator.specs.JvmClass;
 import jvm_class_generator.specs.attributes.Code;
 import jvm_class_generator.specs.class_content.Method;
@@ -14,11 +14,11 @@ import jvm_class_generator.specs.data_areas.ConstantPool;
 import jvm_class_generator.specs.helpers.AccessFlags;
 import jvm_class_generator.specs.helpers.ArrayType;
 import jvm_class_generator.specs.helpers.Descriptor;
-import symboltable.symbols.ProcedureSymbol;
-import symboltable.symbols.VariableSymbol;
 
 public class JvmBackend extends Backend {
   public final static JvmBackend instance = new JvmBackend();
+
+  protected final String UNDEFINED = "<?>";
 
   protected JvmBackend() {
   }
@@ -28,24 +28,12 @@ public class JvmBackend extends Backend {
   protected Method method = null;
   protected Code code = null;
 
-  protected Stack<Map<String, Integer>> locals = new Stack<>();
-  protected int nextLocal;
-
-  protected Stack<Map<String, String>> labels = new Stack<>();
-  protected int nextLabelId = 0;
-
-  protected String booleanOp = null;
+  protected Stack<Map<String, String>> labels;
+  protected Map<Symbol.Variable, Integer> locals;
 
   public JvmBackend enterProgram(String name) {
-    symbolTable.addSymbol( new ProcedureSymbol("write", "void", List.of("string"), null) );
-
-    name = name.substring(0, 1).toUpperCase() + name.substring(1);
-    program = new jvm_class_generator.impl.JvmClass(name, Descriptor.NAME_OF(Object.class), AccessFlags.PUBLIC | AccessFlags.SUPER);
+    program = new jvm_class_generator.impl.JvmClass(capitalise(name), Descriptor.NAME_OF(Object.class), AccessFlags.PUBLIC | AccessFlags.SUPER);
     consts = program.constantPool();
-
-    locals.push(new HashMap<>());
-    nextLocal = 1;
-
     return this;
   }
 
@@ -63,159 +51,174 @@ public class JvmBackend extends Backend {
     code = (Code)method.addAttribute("Code");
     code.addStackMapTableAttribute();
 
+    labels = new Stack<>();
     labels.push(new HashMap<>());
+
+    locals = new HashMap<>();
+    nextLocalId = 0;
+    nextLocal(); // args 
     return this;
   }
 
   public JvmBackend exitMainFunction() {
     code.vreturn();
-
     method = null;
     code = null;
-    locals.clear();
-    labels.clear();
+
+    labels.pop();
     return this;
   }
 
-  public JvmBackend enterFunction(ProcedureSymbol symbol) {
-    method = program.addMethod(symbol.name, getMethodDescriptor(symbol), AccessFlags.PUBLIC | AccessFlags.STATIC);
+  public JvmBackend enterFunction(Symbol.Function sym) {
+    method = program.addMethod(sym.name, getMethodDescriptor(sym), AccessFlags.PUBLIC | AccessFlags.STATIC);
     code = (Code)method.addAttribute("Code");
     code.addStackMapTableAttribute();
 
-    labels.clear();
+    labels = new Stack<>();
     labels.push(new HashMap<>());
-    
-    locals.push(new HashMap<>());
-    nextLocal = symbol.getParamTypes().size();
+
+    locals = new HashMap<>();
+    nextLocalId = 0;
+
+    for (Symbol.Param param : sym.params)
+      locals.put(param, nextLocal());
+
     return this;
   }
 
   public JvmBackend exitFunction() {
-    code.vreturn();
+    final String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTOR( method.descriptor() );
+    if (returnDescriptor.equals(Descriptor.VOID))
+      code.vreturn();
 
     method = null;
     code = null;
-    locals.clear();
-    labels.clear();
     return this;
   }
 
-
-  public JvmBackend loadConstant(String value, String type) {
-    if (type.equals("string")) {
-      code.ldc( consts.addString(value) );
+  public JvmBackend loadConstant(Symbol.Const sym) {
+    if (sym.type.equals("string")) {
+      code.ldc( consts.addString(sym.value) );
+      return this;
     }
-    else if (type.equals("bool")) {
-      if (value.equals("True")) {
-        code.iconst_1(); 
+    
+    if (sym.type.equals("bool")) {
+      switch (boolOp) {
+        case UNDEFINED:
+          if (sym.value.equals("True")) code.iconst_1();
+          else code.iconst_0();
+          break;
+
+        case "or":
+          if (sym.value.equals("True")) code.gotoLabel(labels.peek().get("true"));
+          break;
+
+        case "and":
+          if (sym.value.equals("False")) code.gotoLabel(labels.peek().get("false"));
+          break;
+      }
+
+      return this;
+    }
+
+    final int value = Integer.parseInt(sym.value);
+    if (value == -1) code.iconst_m1();
+    else if (value == 0) code.iconst_0();
+    else if (value == 1) code.iconst_1();
+    else if (value == 2) code.iconst_2();
+    else if (value == 3) code.iconst_3();
+    else if (value == 4) code.iconst_4();
+    else if (value == 5) code.iconst_5();
+    else if ((value & 0x7f) == value) code.bipush(value);
+    else if ((value & 0x7fff) == value) code.sipush(value);
+    else code.ldc( consts.addInteger(value) );
+    return this;
+  }
+
+  public JvmBackend allocVariable(Symbol.Variable sym) {
+    if (!sym.isLocal) {
+      program.addField(sym.name, getTypeDescriptor(sym.type), AccessFlags.PUBLIC | AccessFlags.STATIC);
+    }
+
+    return this;
+  }
+
+  public JvmBackend store(Symbol.Variable sym) {
+    if (sym.name.endsWith("[]")) {
+      if (sym.type.equals("bool")) code.bastore();
+      else if (sym.type.equals("int")) code.iastore();
+    }
+    else {
+      if (sym.isLocal) {
+        if (!locals.containsKey(sym))
+          locals.put(sym, nextLocal());
+
+        if (sym.isArray()) {
+          if (locals.get(sym) == 0) code.astore_0();
+          else if (locals.get(sym) == 1) code.astore_1();
+          else if (locals.get(sym) == 2) code.astore_2();
+          else if (locals.get(sym) == 3) code.astore_3();
+          else code.astore(locals.get(sym), locals.get(sym) > 0xff);
+        }
+        else {
+          if (locals.get(sym) == 0) code.istore_0();
+          else if (locals.get(sym) == 1) code.istore_1();
+          else if (locals.get(sym) == 2) code.istore_2();
+          else if (locals.get(sym) == 3) code.istore_3();
+          else code.istore(locals.get(sym), locals.get(sym) > 0xff);
+        }
       }
       else {
-        code.iconst_0();
-      }
-
-      if ("And".equals(booleanOp)) {
-        code.ifeq(labels.peek().get("false"));
-      }
-      else if ("Or".equals(booleanOp)) {
-        code.ifne(labels.peek().get("false"));
+        final int fieldRef = consts.addFieldref(program.name(), sym.name, getTypeDescriptor(sym.type));
+        code.putStatic(fieldRef);
       }
     }
-    else if (type.equals("int")) {
-      int intValue = Integer.parseInt(value);
-
-      if (intValue == -1) code.iconst_m1();
-      else if (intValue == 0) code.iconst_0();
-      else if (intValue == 1) code.iconst_1();
-      else if (intValue == 2) code.iconst_2();
-      else if (intValue == 3) code.iconst_3();
-      else if (intValue == 4) code.iconst_4();
-      else if (intValue == 5) code.iconst_5();
-      else if ((intValue & 0x7f) == intValue) code.bipush(intValue);
-      else if ((intValue & 0x7fff) == intValue) code.sipush(intValue);
-      else code.ldc( consts.addInteger(intValue) );
-    }
-
+    
     return this;
   }
 
-  public JvmBackend callFunction(String name) {
-    ProcedureSymbol symbol = (ProcedureSymbol)symbolTable.get(name);
-    boolean isStdLib = symbol.scope.isStandardLibrary;
-
-    endBooleanExpression();
-    code.invokeStatic( consts.addMethodref(isStdLib ? stdlib.filename : program.name(), name, getMethodDescriptor(symbol)) );
-    return this;
-  }
-
-  public JvmBackend allocLocal(VariableSymbol symbol) {
-    locals.peek().put(symbol.name, nextLocal++);
-    return this;
-  }
-
-  public JvmBackend store(VariableSymbol symbol, boolean isArrayElement) {
-    endBooleanExpression();
-
-    if (isArrayElement) {
-      if (symbol.type.startsWith("int")) code.iastore();
-      else if (symbol.type.startsWith("bool")) code.bastore();
-      return this;
+  public JvmBackend load(Symbol.Variable sym) {
+    if (sym.name.endsWith("[]")) {
+      if (sym.type.equals("bool")) code.baload();
+      else if (sym.type.equals("int")) code.iaload();
     }
-
-    final int local = getLocal(symbol.name);
-
-    if (symbol.type.endsWith("[]")) {
-      code.astore(local, local > 0xff);
-      return this;
-    }
-
-    if (local == 0) code.istore_0();
-    else if (local == 1) code.istore_1();
-    else if (local == 2) code.istore_2();
-    else if (local == 3) code.istore_3();
-    else code.istore(local, local > 0xff);
-    return this;
-  }
-
-  public JvmBackend load(VariableSymbol symbol, boolean isArrayElement) {
-    final int local = getLocal(symbol.name);
-
-    if (isArrayElement) {
-      if (symbol.type.startsWith("int")) {
-        code.iaload(); 
-      }
-      else if (symbol.type.startsWith("bool")) {
-        code.baload();
-
-        if ("And".equals(booleanOp)) {
-          code.ifeq(labels.peek().get("false"));
+    else {
+      if (sym.isLocal) {
+        if (sym.isArray()) {
+          if (locals.get(sym) == 0) code.aload_0();
+          else if (locals.get(sym) == 1) code.aload_1();
+          else if (locals.get(sym) == 2) code.aload_2();
+          else if (locals.get(sym) == 3) code.aload_3();
+          else code.aload(locals.get(sym), locals.get(sym) > 0xff);
         }
-        else if ("Or".equals(booleanOp)) {
-          code.ifne(labels.peek().get("false"));
+        else {
+          if (locals.get(sym) == 0) code.iload_0();
+          else if (locals.get(sym) == 1) code.iload_1();
+          else if (locals.get(sym) == 2) code.iload_2();
+          else if (locals.get(sym) == 3) code.iload_3();
+          else code.iload(locals.get(sym), locals.get(sym) > 0xff);
         }
       }
-
-      return this;
-    }
-
-    if (symbol.type.endsWith("[]")) {
-      code.aload(local, local > 0xff);
-      return this;
-    }
-
-    if (local == 0) code.iload_0();
-    else if (local == 1) code.iload_1();
-    else if (local == 2) code.iload_2();
-    else if (local == 3) code.iload_3();
-    else code.iload(local, local > 0xff);
-
-    if (symbol.type.startsWith("bool")) {
-      if ("And".equals(booleanOp)) {
-        code.ifeq(labels.peek().get("false"));
-      }
-      else if ("Or".equals(booleanOp)) {
-        code.ifne(labels.peek().get("false"));
+      else {
+        final int fieldRef = consts.addFieldref(program.name(), sym.name, getTypeDescriptor(sym.type));
+        code.getStatic(fieldRef);
       }
     }
+
+    if (sym.type.equals("bool") && boolOp.equals("or")) {
+      code.ifne(labels.peek().get("true"));
+    }
+    else if (sym.type.equals("bool") && boolOp.equals("and")) {
+      code.ifeq(labels.peek().get("false"));
+    }
+
+    return this;
+  }
+
+  public JvmBackend callFunction(Symbol.Function fn) {
+    final String className = fn.isStdLib ? stdlib.filename : program.name();
+    final int methodRef = consts.addMethodref(className, fn.name, getMethodDescriptor(fn));
+    code.invokeStatic(methodRef);
     return this;
   }
 
@@ -227,8 +230,50 @@ public class JvmBackend extends Backend {
     return this;
   }
 
-  public JvmBackend op2(String operator) {
-    switch (operator) {
+  protected String boolOp = UNDEFINED;
+
+  public JvmBackend start() {
+    labels.push(new HashMap<>());
+
+    final String startLbl = nextLabel();
+    labels.peek().put("start", startLbl);
+    code.addLabel(startLbl);
+
+    labels.peek().put("end", nextLabel());
+    return this;
+  }
+
+  public JvmBackend end() {
+    if (boolOp.equals("and")) {
+      code
+        .iconst_1()
+        .gotoLabel(labels.peek().get("end"))
+        .addLabel(labels.peek().get("false"), labels.peek().get("start"))
+        .iconst_0()
+        .addLabel(labels.peek().get("end"));
+
+      boolOp = UNDEFINED;
+    }
+    else if (boolOp.equals("or")) {
+      code
+        .iconst_0()
+        .gotoLabel(labels.peek().get("end"))
+        .addLabel(labels.peek().get("true"), labels.peek().get("start"))
+        .iconst_1()
+        .addLabel(labels.peek().get("end"));
+
+      boolOp = UNDEFINED;
+    }
+    else {
+      code.addLabel(labels.peek().get("end"), labels.peek().get("start"));
+    }
+
+    labels.pop();
+    return this;
+  }
+
+  public JvmBackend op2(String op) {
+    switch (op) {
       case "+":
         code.iadd();
         break;
@@ -250,129 +295,103 @@ public class JvmBackend extends Backend {
         break;
 
       case "Or":
-        if (booleanOp == null) {
-          labels.peek().put("start", "" + nextLabelId++);
-          labels.peek().put("true", "" + nextLabelId++);
-          labels.peek().put("end", "" + nextLabelId++);
-          code.addLabel(labels.peek().get("start"));
-        }
-        else if (booleanOp.equals("And")) {          
-          code
-            .iconst_1()
-            .gotoLabel(labels.peek().get("end"))
-            .addLabel(labels.peek().get("false"), labels.peek().get("start"));
+        if (!boolOp.equals("or")) {
+          final String trueLbl = nextLabel();
+          labels.peek().put("true", trueLbl);
+          
+          if (boolOp.equals("and")) {
+            code
+              .gotoLabel(trueLbl)
+              .addLabel(labels.peek().get("false"), labels.peek().get("start"));
+          }
 
-          labels.peek().put("true", "" + nextLabelId++);
+          boolOp = "or";
         }
 
-        booleanOp = operator;
         break;
 
       case "And":
-        if (booleanOp == null) {
-          labels.peek().put("start", "" + nextLabelId++);
-          labels.peek().put("false", "" + nextLabelId++);
-          labels.peek().put("end", "" + nextLabelId++);
-          code.addLabel(labels.peek().get("start"));
-        }
-        else if (booleanOp.equals("Or")) {          
-          code
-            .iconst_0()
-            .gotoLabel(labels.peek().get("end"))
-            .addLabel(labels.peek().get("true"), labels.peek().get("start"));
+        if (!boolOp.equals("and")) {
+          final String falseLbl = nextLabel();
+          labels.peek().put("false", falseLbl);
 
-          labels.peek().put("false", "" + nextLabelId++);
+          if (boolOp.equals("or")) {
+            code
+              .gotoLabel(falseLbl)
+              .addLabel(labels.peek().get("true"), labels.peek().get("start"));
+          }
+
+          boolOp = "and";
         }
 
-        booleanOp = operator;
         break;
-    }
 
-    return this;
-  }
+      case "==":
+        if (boolOp.equals(UNDEFINED)) {
+          boolOp = "or";
+          labels.peek().put("true", nextLabel());
+        }
+        
+        if (boolOp.equals("and")) code.if_icmpne(labels.peek().get("false"));
+        else code.if_icmpeq(labels.peek().get("true"));
+        break;
 
-  public JvmBackend startCompareOp() {
-    if (booleanOp == null) {
-      labels.peek().put("start", "" + nextLabelId++);
-      code.addLabel(labels.peek().get("start"));
+      case "!=":
+        if (boolOp.equals(UNDEFINED)) {
+          boolOp = "or";
+          labels.peek().put("true", nextLabel());
+        }
 
-      labels.peek().put("true", "" + nextLabelId++);
-      labels.peek().put("end", "" + nextLabelId++);
-    }
+        if (boolOp.equals("and")) code.if_icmpeq(labels.peek().get("false"));
+        else code.if_icmpne(labels.peek().get("true"));
+        break;
 
-    return this;
-  }
+      case ">":
+        if (boolOp.equals(UNDEFINED)) {
+          boolOp = "or";
+          labels.peek().put("true", nextLabel());
+        }
+        
+        if (boolOp.equals("and")) code.if_icmple(labels.peek().get("false"));
+        else code.if_icmpgt(labels.peek().get("true"));
+        break;
 
-  public JvmBackend compareOp(String operator) {
-    if ("And".equals(booleanOp)) {
-      switch (operator) {
-        case "==":
-          code.if_icmpne(labels.peek().get("false"));
-          break;
+      case "<":
+        if (boolOp.equals(UNDEFINED)) {
+          boolOp = "or";
+          labels.peek().put("true", nextLabel());
+        }
+        
+        if (boolOp.equals("and")) code.if_icmpge(labels.peek().get("false"));
+        else code.if_icmplt(labels.peek().get("true"));
+        break;
 
-        case "!=":
-          code.if_icmpeq(labels.peek().get("false"));
-          break;
+      case ">=":
+        if (boolOp.equals(UNDEFINED)) {
+          boolOp = "or";
+          labels.peek().put("true", nextLabel());
+        }
 
-        case ">":
-          code.if_icmple(labels.peek().get("false"));
-          break;
+        if (boolOp.equals("and")) code.if_icmplt(labels.peek().get("false"));
+        else code.if_icmpge(labels.peek().get("true"));
+        break;
 
-        case "<":
-          code.if_icmpge(labels.peek().get("false"));
-          break;
+      case "<=":
+        if (boolOp.equals(UNDEFINED)) {
+          boolOp = "or";
+          labels.peek().put("true", nextLabel());
+        }
 
-        case ">=":
-          code.if_icmplt(labels.peek().get("false"));
-          break;
-
-        case "<=":
-          code.if_icmpgt(labels.peek().get("false"));
-          break;
-      }
-    }
-    else {
-      switch (operator) {
-        case "==":
-          code.if_icmpeq(labels.peek().get("true"));
-          break;
-
-        case "!=":
-          code.if_icmpne(labels.peek().get("true"));
-          break;
-
-        case ">":
-          code.if_icmpgt(labels.peek().get("true"));
-          break;
-
-        case "<":
-          code.if_icmplt(labels.peek().get("true"));
-          break;
-
-        case ">=":
-          code.if_icmpge(labels.peek().get("true"));
-          break;
-
-        case "<=":
-          code.if_icmple(labels.peek().get("true"));
-          break;
-      }
-
-      if (booleanOp == null) {
-        code
-          .iconst_0()
-          .gotoLabel(labels.peek().get("end"))
-          .addLabel(labels.peek().get("true"), labels.peek().get("start"))
-          .iconst_1()
-          .addLabel(labels.peek().get("end"));
-      }
+        if (boolOp.equals("and")) code.if_icmpgt(labels.peek().get("false"));
+        else code.if_icmple(labels.peek().get("true"));
+        break;
     }
 
     return this;
   }
 
   public JvmBackend newArray(String baseType) {
-    int arrType = "int".equals(baseType) ? ArrayType.INT : ArrayType.BOOLEAN;
+    int arrType = baseType.equals("int") ? ArrayType.INT : ArrayType.BOOLEAN;
     code.newArray(arrType);
     return this;
   }
@@ -382,111 +401,85 @@ public class JvmBackend extends Backend {
     return this;
   }
 
-  public JvmBackend ifThen() {
-    labels.push(new HashMap<>());
-    labels.peek().put("else", "" + nextLabelId++);
-    code.ifeq(labels.peek().get("else"));    
+  public JvmBackend branch() {
+    code.ifeq(labels.peek().get("end"));
     return this;
   }
 
-  public JvmBackend elseThen() {
-    labels.peek().put("endIf", "" + nextLabelId++);
+  public JvmBackend elseBranch() {
+    String elseLbl = labels.peek().get("end");
+    String endLbl = nextLabel();
+    labels.peek().put("end", endLbl);
 
     code
-      .gotoLabel(labels.peek().get("endIf"))
-      .addLabel(labels.peek().get("else"));
-    return this;
-  }
-
-  public JvmBackend endIf() {
-    if (labels.peek().containsKey("endIf")) {
-      code.addLabel(labels.peek().get("endIf"));
-    }
-    else {
-      code.addLabel(labels.peek().get("else"));
-    }
+      .gotoLabel(endLbl)
+      .addLabel(elseLbl);
 
     return this;
   }
 
-  public JvmBackend startWhile() {
-    labels.push(new HashMap<>());
-    labels.peek().put("while", "" + nextLabelId++);
-    labels.peek().put("endWhile", "" + nextLabelId++);
-    code.addLabel(labels.peek().get("while"));
+  public JvmBackend loop() {
+    code.gotoLabel(labels.peek().get("start"));
     return this;
   }
 
-  public JvmBackend whileDo() {
-    code.ifeq(labels.peek().get("endWhile"));
-    return this;
-  }
+  @Override
+  public Backend returnFunction() {
+    final String returnDescriptor = Descriptor.METHOD_RETURN_DESCRIPTOR( method.descriptor() );
 
-  public JvmBackend endWhile() {
-    code
-      .gotoLabel(labels.peek().get("while"))
-      .addLabel(labels.peek().get("endWhile"), labels.peek().get("while"));
-    return this;
-  }
+    switch (returnDescriptor) {
+      case Descriptor.BOOLEAN:
+      case Descriptor.INT:
+        code.ireturn();
+        break;
 
-  public JvmBackend startBlock() {
-    locals.push(new HashMap<>());
-    return this;
-  }
+      case Descriptor.VOID:
+        code.vreturn();
+        break;
 
-  public JvmBackend endBlock() {
-    locals.pop();
-    return this;
-  }
-
-
-
-  protected int getLocal(String localName) {
-    final int topIdx = locals.size() - 1;
-
-    for (int scopeIdx = topIdx; scopeIdx >= 0; scopeIdx--) {
-      if (locals.get(scopeIdx).containsKey(localName))
-        return locals.get(scopeIdx).get(localName);
+      default:
+        code.areturn();
     }
 
-    return -1;
+    return this;
   }
 
-  protected void endBooleanExpression() {
-    if (booleanOp != null) {
-      if (booleanOp.equals("And")) {          
-        code
-          .iconst_1()
-          .gotoLabel(labels.peek().get("end"))
-          .addLabel(labels.peek().get("false"), labels.peek().get("start"))
-          .iconst_0()
-          .addLabel(labels.peek().get("end"));
-      }
-      else if (booleanOp.equals("Or")) {          
-        code
-          .iconst_0()
-          .gotoLabel(labels.peek().get("end"))
-          .addLabel(labels.peek().get("true"), labels.peek().get("start"))
-          .iconst_1()
-          .addLabel(labels.peek().get("end"));
-      }
 
-      booleanOp = null;
-    }
+
+  protected int nextLabelId = 0;
+  protected String nextLabel() {
+    return "" + nextLabelId++;
   }
 
-  protected String getMethodDescriptor(ProcedureSymbol symbol) {
-    String returnDescriptor = getTypeDescriptor(symbol.returnType);
-    String[] paramDescriptors = new String[ symbol.getParamTypes().size() ];
+  protected int nextLocalId = 0;
+  protected int nextLocal() {
+    return nextLocalId++;
+  }
+
+  protected String getMethodDescriptor(Symbol.Function sym) {
+    String returnDescriptor = getTypeDescriptor(sym.type);
+    String[] paramDescriptors = new String[ sym.params.size() ];
 
     for (int idx = 0; idx < paramDescriptors.length; idx++) {
-      paramDescriptors[idx] = getTypeDescriptor(symbol.getParamType(idx));
+      paramDescriptors[idx] = getTypeDescriptor( sym.params.get(idx).type );
     }
 
     return Descriptor.METHOD(returnDescriptor, paramDescriptors);
   }
 
   protected String getTypeDescriptor(String type) {
+    final String baseType = type.split("\\[")[0];
+    final int dimensions = type.split("\\[").length - 1;
+
+    String descriptor = getBaseTypeDescriptor(baseType);
+    for (int i = 0; i < dimensions; i++) {
+      descriptor = Descriptor.ARRAY(descriptor);
+    }
+
+    return descriptor;
+  }
+
+  protected String getBaseTypeDescriptor(String type) {
     switch (type) {
       case "int":
         return Descriptor.INT;
@@ -502,6 +495,10 @@ public class JvmBackend extends Backend {
     }
 
     return "?";
+  }
+
+  protected String capitalise(String str) {
+    return str.substring(0, 1).toUpperCase() + str.substring(1);
   }
 
 }
