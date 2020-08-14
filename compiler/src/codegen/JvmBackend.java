@@ -2,13 +2,16 @@ package codegen;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
 import analysis.Symbol;
 import jvm_class_generator.specs.JvmClass;
 import jvm_class_generator.specs.attributes.Code;
+import jvm_class_generator.specs.attributes.InnerClasses;
 import jvm_class_generator.specs.class_content.Method;
 import jvm_class_generator.specs.data_areas.ConstantPool;
 import jvm_class_generator.specs.helpers.AccessFlags;
@@ -27,13 +30,16 @@ public class JvmBackend extends Backend {
   protected ConstantPool consts = null;
   protected Method method = null;
   protected Code code = null;
+  protected InnerClasses innerClasses = null;
+  protected JvmClass record = null;
+  protected List<JvmClass> records = new ArrayList<>();
 
   protected Stack<Map<String, String>> labels;
   protected Map<Symbol.Variable, Integer> locals;
 
   public JvmBackend enterProgram(String name) {
-    program = new jvm_class_generator.impl.JvmClass(capitalise(name), Descriptor.NAME_OF(Object.class), AccessFlags.PUBLIC | AccessFlags.SUPER);
-    consts = program.constantPool();
+    this.program = new jvm_class_generator.impl.JvmClass(capitalise(name), Descriptor.NAME_OF(Object.class), AccessFlags.PUBLIC | AccessFlags.SUPER);
+    this.consts = program.constantPool();
     return this;
   }
 
@@ -43,42 +49,48 @@ public class JvmBackend extends Backend {
     }
 
     Files.write( outputDir.resolve(stdlib.filename + ".class"), stdlib.generate() );
+
+    for (JvmClass record : records)
+      Files.write( outputDir.resolve(record.name() + ".class"), record.generate() );
+
     Files.write( outputDir.resolve(program.name() + ".class"), program.generate() );
   }
 
   public JvmBackend enterMainFunction() {
-    method = program.addMethod("main", Descriptor.MAIN, AccessFlags.PUBLIC | AccessFlags.STATIC);
-    code = (Code)method.addAttribute("Code");
+    this.method = program.addMethod("main", Descriptor.MAIN, AccessFlags.PUBLIC | AccessFlags.STATIC);
+    this.code = (Code)method.addAttribute("Code");
     code.addStackMapTableAttribute();
 
-    labels = new Stack<>();
+    this.labels = new Stack<>();
     labels.push(new HashMap<>());
+    this.nextLabelId = 0;
 
-    locals = new HashMap<>();
-    nextLocalId = 0;
+    this.locals = new HashMap<>();
+    this.nextLocalId = 0;
     nextLocal(); // args 
     return this;
   }
 
   public JvmBackend exitMainFunction() {
     code.vreturn();
-    method = null;
-    code = null;
+    this.method = null;
+    this.code = null;
 
     labels.pop();
     return this;
   }
 
   public JvmBackend enterFunction(Symbol.Function sym) {
-    method = program.addMethod(sym.name, getMethodDescriptor(sym), AccessFlags.PUBLIC | AccessFlags.STATIC);
-    code = (Code)method.addAttribute("Code");
+    this.method = program.addMethod(sym.name, getMethodDescriptor(sym), AccessFlags.PUBLIC | AccessFlags.STATIC);
+    this.code = (Code)method.addAttribute("Code");
     code.addStackMapTableAttribute();
 
-    labels = new Stack<>();
+    this.labels = new Stack<>();
     labels.push(new HashMap<>());
+    this.nextLabelId = 0;
 
-    locals = new HashMap<>();
-    nextLocalId = 0;
+    this.locals = new HashMap<>();
+    this.nextLocalId = 0;
 
     for (Symbol.Param param : sym.params)
       locals.put(param, nextLocal());
@@ -93,6 +105,27 @@ public class JvmBackend extends Backend {
 
     method = null;
     code = null;
+    return this;
+  }
+
+  public JvmBackend enterRecord(String name) {
+    this.record = new jvm_class_generator.impl.JvmClass(program.name() + "$" + capitalise(name), Descriptor.NAME_OF(Object.class), AccessFlags.PUBLIC | AccessFlags.SUPER);
+    return this;
+  }
+
+  public JvmBackend exitRecord() {
+    Method init = record.addMethod("<init>", Descriptor.METHOD(Descriptor.VOID), AccessFlags.PUBLIC);
+    ((Code)init.addAttribute("Code"))
+      .aload_0()
+      .invokeSpecial( record.constantPool().addMethodref(Descriptor.NAME_OF(Object.class), "<init>", Descriptor.METHOD(Descriptor.VOID)) )
+      .vreturn();
+    
+    if (innerClasses == null)
+      this.innerClasses = (InnerClasses)program.addAttribute("InnerClasses");
+    
+    this.records.add(record);
+    this.innerClasses.add(record, record.name());
+    this.record = null;
     return this;
   }
 
@@ -137,7 +170,8 @@ public class JvmBackend extends Backend {
 
   public JvmBackend allocVariable(Symbol.Variable sym) {
     if (!sym.isLocal) {
-      program.addField(sym.name, getTypeDescriptor(sym.type), AccessFlags.PUBLIC | AccessFlags.STATIC);
+      if (record != null) record.addField(sym.name, getTypeDescriptor(sym.type), AccessFlags.PUBLIC);
+      else program.addField(sym.name, getTypeDescriptor(sym.type), AccessFlags.PUBLIC | AccessFlags.STATIC);
     }
 
     return this;
@@ -147,25 +181,31 @@ public class JvmBackend extends Backend {
     if (sym.name.endsWith("[]")) {
       if (sym.type.equals("bool")) code.bastore();
       else if (sym.type.equals("int")) code.iastore();
+      else code.aastore();
+    }
+    else if (sym.name.contains(".")) {
+      final String record = program.name() + "$" + capitalise(sym.recordType);
+      final String[] name = sym.name.split("\\.");
+      code.putField( consts.addFieldref(record, name[name.length - 1], getTypeDescriptor(sym.type)) );
     }
     else {
       if (sym.isLocal) {
         if (!locals.containsKey(sym))
           locals.put(sym, nextLocal());
 
-        if (sym.isArray()) {
-          if (locals.get(sym) == 0) code.astore_0();
-          else if (locals.get(sym) == 1) code.astore_1();
-          else if (locals.get(sym) == 2) code.astore_2();
-          else if (locals.get(sym) == 3) code.astore_3();
-          else code.astore(locals.get(sym), locals.get(sym) > 0xff);
-        }
-        else {
+        if (sym.isPrimitive()) {
           if (locals.get(sym) == 0) code.istore_0();
           else if (locals.get(sym) == 1) code.istore_1();
           else if (locals.get(sym) == 2) code.istore_2();
           else if (locals.get(sym) == 3) code.istore_3();
           else code.istore(locals.get(sym), locals.get(sym) > 0xff);
+        }
+        else {
+          if (locals.get(sym) == 0) code.astore_0();
+          else if (locals.get(sym) == 1) code.astore_1();
+          else if (locals.get(sym) == 2) code.astore_2();
+          else if (locals.get(sym) == 3) code.astore_3();
+          else code.astore(locals.get(sym), locals.get(sym) > 0xff);
         }
       }
       else {
@@ -181,22 +221,28 @@ public class JvmBackend extends Backend {
     if (sym.name.endsWith("[]")) {
       if (sym.type.equals("bool")) code.baload();
       else if (sym.type.equals("int")) code.iaload();
+      else code.aaload();
+    }
+    else if (sym.name.contains(".")) {
+      final String record = program.name() + "$" + capitalise(sym.recordType);
+      final String[] name = sym.name.split("\\.");
+      code.getField( consts.addFieldref(record, name[name.length - 1], getTypeDescriptor(sym.type)) );
     }
     else {
       if (sym.isLocal) {
-        if (sym.isArray()) {
-          if (locals.get(sym) == 0) code.aload_0();
-          else if (locals.get(sym) == 1) code.aload_1();
-          else if (locals.get(sym) == 2) code.aload_2();
-          else if (locals.get(sym) == 3) code.aload_3();
-          else code.aload(locals.get(sym), locals.get(sym) > 0xff);
-        }
-        else {
+        if (sym.isPrimitive()) {
           if (locals.get(sym) == 0) code.iload_0();
           else if (locals.get(sym) == 1) code.iload_1();
           else if (locals.get(sym) == 2) code.iload_2();
           else if (locals.get(sym) == 3) code.iload_3();
           else code.iload(locals.get(sym), locals.get(sym) > 0xff);
+        }
+        else {
+          if (locals.get(sym) == 0) code.aload_0();
+          else if (locals.get(sym) == 1) code.aload_1();
+          else if (locals.get(sym) == 2) code.aload_2();
+          else if (locals.get(sym) == 3) code.aload_3();
+          else code.aload(locals.get(sym), locals.get(sym) > 0xff);
         }
       }
       else {
@@ -390,9 +436,23 @@ public class JvmBackend extends Backend {
     return this;
   }
 
-  public JvmBackend newArray(String baseType) {
-    int arrType = baseType.equals("int") ? ArrayType.INT : ArrayType.BOOLEAN;
-    code.newArray(arrType);
+  public JvmBackend newArray(String baseType, int dimensions) {
+    if (dimensions > 1) {
+      String descriptor = getBaseTypeDescriptor(baseType);
+
+      for (int i = 0; i < dimensions; i++)
+        descriptor = Descriptor.ARRAY(descriptor);
+
+      code.multianewArray( consts.addClass(descriptor), dimensions );
+    }
+    else if (baseType.equals("int") || baseType.equals("bool")) {
+      int arrType = baseType.equals("int") ? ArrayType.INT : ArrayType.BOOLEAN;
+      code.newArray(arrType);
+    }
+    else {
+      code.anewArray( consts.addClass(program.name() + "$" + capitalise(baseType)) );
+    }
+
     return this;
   }
 
@@ -440,6 +500,17 @@ public class JvmBackend extends Backend {
       default:
         code.areturn();
     }
+
+    return this;
+  }
+
+  public JvmBackend newRecord(String type) {
+    final String name = program.name() + "$" + capitalise(type);
+
+    code
+      .anew( consts.addClass( program.name() + "$" + capitalise(type) ) )
+      .dup()
+      .invokeSpecial( consts.addMethodref(name, "<init>", Descriptor.METHOD(Descriptor.VOID)) );
 
     return this;
   }
@@ -492,9 +563,10 @@ public class JvmBackend extends Backend {
 
       case "void":
         return Descriptor.VOID;
-    }
 
-    return "?";
+      default:
+        return Descriptor.REFERENCE(program.name() + "$" + capitalise(type));
+    }
   }
 
   protected String capitalise(String str) {

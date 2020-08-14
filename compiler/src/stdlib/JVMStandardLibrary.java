@@ -14,9 +14,9 @@ import jvm_class_generator.specs.helpers.Descriptor;
 import analysis.SymbolTable;
 import analysis.Symbol;
 
-public class JVMStandardLibrary extends StandardLibrary {
-  public final static StandardLibrary instance = new JVMStandardLibrary();
-  protected JVMStandardLibrary() { }
+public class JvmStandardLibrary extends StandardLibrary {
+  public final static StandardLibrary instance = new JvmStandardLibrary();
+  protected JvmStandardLibrary() { }
 
   @Override
   public void addToSymbolTable(SymbolTable symboltable) {

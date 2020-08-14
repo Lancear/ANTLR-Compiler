@@ -22,6 +22,10 @@ public abstract class Symbol {
     this.type = type;
   }
 
+  public boolean isPrimitive() {
+    return (type.equals("int") || type.equals("bool"));
+  }
+
   public boolean isVariable() {
     return (this instanceof Variable);
   }
@@ -80,6 +84,7 @@ public abstract class Symbol {
   public static class Variable extends Symbol {
 
     public boolean isLocal;
+    public String recordType = UNDEFINED;
 
     public Variable(String name, String type) {
       this(name, type, true);
@@ -88,6 +93,11 @@ public abstract class Symbol {
     public Variable(String name, String type, boolean isLocal) {
       super("variable", name, type);
       this.isLocal = isLocal;
+    }
+
+    protected Variable(String name, String type, boolean isLocal, String recordType) {
+      this(name, type, isLocal);
+      this.recordType = recordType;
     }
 
     protected Variable(String kind, String name, String type, boolean isLocal) {
@@ -104,7 +114,7 @@ public abstract class Symbol {
       if (!record.fields.containsKey(field))
         return new Error();
 
-      return new Variable(name + "." + field, record.fields.get(field).type, isLocal);
+      return new Variable(name + "." + field, record.fields.get(field).type, isLocal, type);
     }
 
     public Variable selectElement() {

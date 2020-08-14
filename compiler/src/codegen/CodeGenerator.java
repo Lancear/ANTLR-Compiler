@@ -149,11 +149,24 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
   }
 
   public Symbol visitSelector(SelectorContext ctx, Symbol.Variable sym) {
-    boolean wasAssignedTo = isAssignedTo;
-    isAssignedTo = false;
-    visit(ctx.expression());
-    isAssignedTo = wasAssignedTo;
-    return sym.selectElement();
+    if (ctx.expression() != null) {
+      boolean wasAssignedTo = isAssignedTo;
+      isAssignedTo = false;
+      visit(ctx.expression());
+      isAssignedTo = wasAssignedTo;
+      sym = sym.selectElement();
+    }
+    else {
+      final String field = ctx.Id().getText();
+      sym = sym.selectField(symboltable, field).asVariable();
+    }
+
+    if (ctx.selector() != null) {
+      backend.load(sym);
+      sym = visitSelector(ctx.selector(), sym).asVariable();
+    }
+
+    return sym;
   }
 
   @Override
@@ -161,8 +174,6 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
     isAssignedTo = true;
     final Symbol.Variable sym = visitFullIdentifier( ctx.fullIdentifier() ).asVariable();
     isAssignedTo = false;
-
-    System.out.println(ctx.getText() + " (sym.isLocal: " + sym.isLocal + ")");
 
     visit(ctx.expression());
     backend.store(sym);
@@ -280,11 +291,18 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
 
   @Override
   public Symbol visitCreationExpr(CreationExprContext ctx) {
-    for(ExpressionContext expr : ctx.expression())
-      visit(expr);
+    if (ctx.expression().size() > 0) {
+      for (ExpressionContext expr : ctx.expression())
+        visit(expr);
 
-    final String baseType = ctx.baseType().getText();
-    backend.newArray(baseType);
+      final String baseType = ctx.baseType().getText();
+      backend.newArray(baseType, ctx.expression().size());
+    }
+    else {
+      final String type = ctx.baseType().getText();
+      backend.newRecord(type);
+    }
+
     return null;
   }
 
@@ -351,6 +369,21 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
       visit(ctx.expression());
     
     backend.returnFunction();
+    return null;
+  }
+
+  @Override
+  public Symbol visitRecordDeclaration(RecordDeclarationContext ctx) {
+    final String name = ctx.Id().getText();
+    
+    symboltable.enterScope();
+    backend.enterRecord(name);
+    
+    for (VarDeclarationContext field : ctx.varDeclaration())
+      visitVarDeclaration(field);
+
+    backend.exitRecord();
+    symboltable.exitScope();
     return null;
   }
 

@@ -21,6 +21,10 @@ public abstract class Backend {
   public abstract Backend enterFunction(Symbol.Function sym);
   public abstract Backend exitFunction();
 
+  public abstract Backend enterRecord(String name);
+  public abstract Backend exitRecord();
+
+
   public abstract Backend loadConstant(Symbol.Const sym);  
   public abstract Backend allocVariable(Symbol.Variable sym);
   public abstract Backend store(Symbol.Variable sym);
@@ -37,7 +41,9 @@ public abstract class Backend {
   public abstract Backend loop();
   public abstract Backend returnFunction();
 
-  public abstract Backend newArray(String baseType);
+  public abstract Backend newArray(String baseType, int dimensions);
   public abstract Backend arraylength();
+  
+  public abstract Backend newRecord(String type);
 
 }

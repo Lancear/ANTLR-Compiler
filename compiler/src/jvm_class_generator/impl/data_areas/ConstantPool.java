@@ -140,7 +140,9 @@ public class ConstantPool extends jvm_class_generator.specs.data_areas.ConstantP
       return Descriptor.INT;
     }
     else if (entry.startsWith("<Class>")) {
-      return Descriptor.REFERENCE( entry.replace("<Class>", "") );
+      return (entry.contains("[")) 
+        ? entry.replace("<Class>", "")
+        : Descriptor.REFERENCE( entry.replace("<Class>", "") );
     }
     else if (entry.startsWith("<NameAndType>") || entry.startsWith("<Fieldref>") || entry.startsWith("<Methodref>")) {
       return entry.substring( entry.indexOf(":") + 1 );

@@ -20,7 +20,7 @@ import parser.YaplParser;
 // import app.CompilerErrors.CompilerError;
 // import codegen.CodeGenerator;
 // import codegen.JvmBackend;
-import stdlib.JVMStandardLibrary;
+import stdlib.JvmStandardLibrary;
 
 
 public class Main {
@@ -66,7 +66,7 @@ public class Main {
         return;
 
       // semantic analysis
-      Analysis analysis = new Analysis(parser, JVMStandardLibrary.instance);
+      Analysis analysis = new Analysis(parser, JvmStandardLibrary.instance);
       ParseTreeWalker.DEFAULT.walk(new parser.DetailedYaplListenerAdapter(analysis), tree);
 
       for (CompilerError error : analysis.errors) {
@@ -78,7 +78,7 @@ public class Main {
       if (analysis.errors.size() != 0) return;
 
       // code generation
-      CodeGenerator codegen = new CodeGenerator(JVMStandardLibrary.instance, analysis.symbolTable, args[1], JvmBackend.instance);
+      CodeGenerator codegen = new CodeGenerator(JvmStandardLibrary.instance, analysis.symbolTable, args[1], JvmBackend.instance);
       codegen.visit(tree);
     }
     catch (IOException ex) {

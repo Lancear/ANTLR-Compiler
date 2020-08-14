@@ -940,6 +940,19 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     return this;
   }
 
+  public jvm_class_generator.specs.attributes.Code multianewArray(int id, int dims) {
+    final int opcode = 0xc5;
+    code.writeByte(opcode);
+    code.writeShort(id);
+    code.writeByte(dims);
+
+    for (int i = 0; i < dims; i++)
+      currFrame.stack.pop();
+      
+    currFrame.stack.push( parent.constantPool().findDescriptorByIndex(id) );
+    return this;
+  }
+
   public jvm_class_generator.specs.attributes.Code arraylength() {
     final int opcode = 0xbe;
     code.writeByte(opcode);

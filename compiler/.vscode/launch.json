@@ -10,7 +10,7 @@
       "request": "launch",
       "mainClass": "app.Main",
       "projectName": "compiler_52cc9803",
-      "args": "./testfiles/codegen/test16.yapl ./output/test16"
+      "args": "./testfiles/codegen/test20.yapl ./output/test20"
     },
     {
       "type": "java",
