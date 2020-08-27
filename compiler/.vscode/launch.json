@@ -6,11 +6,11 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Debug (Launch)-Main<compiler_52cc9803>",
+      "name": "Debug (Launch)-Main<compiler_79aa990>",
       "request": "launch",
       "mainClass": "app.Main",
-      "projectName": "compiler_52cc9803",
-      "args": "./testfiles/codegen/test20.yapl ./output/test20"
+      "projectName": "compiler_79aa990",
+      "args": "./testfiles/codegen/test00.yapl ./output/test00"
     },
     {
       "type": "java",

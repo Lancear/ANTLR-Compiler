@@ -20,10 +20,10 @@ public class JvmStandardLibrary extends StandardLibrary {
 
   @Override
   public void addToSymbolTable(SymbolTable symboltable) {
-    symboltable.add( new Symbol.Function("writeint", "void", List.of(new Symbol.Param("i", "int")), true) );
-    symboltable.add( new Symbol.Function("writebool", "void", List.of(new Symbol.Param("b", "bool")), true) );
-    symboltable.add( new Symbol.Function("writeln", "void", List.of(), true) );
-    symboltable.add( new Symbol.Function("readint", "int", List.of(), true) );
+    symboltable.add( new Symbol.Function("writeint", Symbol.VOID, List.of(new Symbol.Param("i", Symbol.INT)), true) );
+    symboltable.add( new Symbol.Function("writebool", Symbol.VOID, List.of(new Symbol.Param("b", Symbol.BOOL)), true) );
+    symboltable.add( new Symbol.Function("writeln", Symbol.VOID, List.of(), true) );
+    symboltable.add( new Symbol.Function("readint", Symbol.INT, List.of(), true) );
   }
 
   @Override
@@ -39,20 +39,11 @@ public class JvmStandardLibrary extends StandardLibrary {
     int systemOut = consts.addFieldref(System, "out", Descriptor.REFERENCE(PrintStream));
     int systemIn = consts.addFieldref(System, "in", Descriptor.REFERENCE(InputStream));
 
-    int printString = consts.addMethodref(PrintStream, "print", Descriptor.METHOD(Descriptor.VOID, Descriptor.STRING));
     int printInt = consts.addMethodref(PrintStream, "print", Descriptor.METHOD(Descriptor.VOID, Descriptor.INT));
     int printBool = consts.addMethodref(PrintStream, "print", Descriptor.METHOD(Descriptor.VOID, Descriptor.BOOLEAN));
     int println = consts.addMethodref(PrintStream, "println", Descriptor.METHOD(Descriptor.VOID));
     int scannerConstructor = consts.addMethodref(Scanner, "<init>", Descriptor.METHOD(Descriptor.VOID, Descriptor.REFERENCE(InputStream)));
     int nextInt = consts.addMethodref(Scanner, "nextInt", Descriptor.METHOD(Descriptor.INT));
-
-    Method writeMethod = stdlib.addMethod("write", Descriptor.METHOD(Descriptor.VOID, Descriptor.STRING), AccessFlags.PUBLIC | AccessFlags.STATIC);
-    Code write = (Code)writeMethod.addAttribute("Code");
-    write
-      .getStatic(systemOut)
-      .aload_0()
-      .invokeVirtual(printString)
-      .vreturn();
 
     Method writeintMethod = stdlib.addMethod("writeint", Descriptor.METHOD(Descriptor.VOID, Descriptor.INT), AccessFlags.PUBLIC | AccessFlags.STATIC);
     Code writeInt = (Code)writeintMethod.addAttribute("Code");

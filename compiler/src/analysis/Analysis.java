@@ -11,13 +11,11 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import app.CompilerErrors;
 import app.CompilerErrors.CompilerError;
 import parser.DetailedYaplListener;
-import parser.YaplParser;
 import parser.YaplParser.*;
 import stdlib.StandardLibrary;
 
 public class Analysis implements DetailedYaplListener {
 
-  protected YaplParser parser;
   protected Stack<Symbol> symbolTrace;
   public final SymbolTable symbolTable;
   public final List<CompilerError> errors;
@@ -26,13 +24,11 @@ public class Analysis implements DetailedYaplListener {
   protected boolean wasLocal = false;
   protected boolean hasReturn = false;
 
-  protected static String UNDEFINED = "<?>";
-  protected String programName = UNDEFINED;
-  protected String procedureName = UNDEFINED;
-  protected String recordName = UNDEFINED;
+  protected String programName = Symbol.UNDEFINED;
+  protected String procedureName = Symbol.UNDEFINED;
+  protected String recordName = Symbol.UNDEFINED;
 
-  public Analysis(YaplParser parser, StandardLibrary stdlib) {
-    this.parser = parser;
+  public Analysis(StandardLibrary stdlib) {
     this.symbolTrace = new Stack<>();
     this.symbolTable = new SymbolTable();
     this.errors = new ArrayList<>();
@@ -114,7 +110,7 @@ public class Analysis implements DetailedYaplListener {
 
     symbolTable.closeScope();
     isLocal = wasLocal;
-    this.recordName = UNDEFINED;
+    this.recordName = Symbol.UNDEFINED;
   }
 
   @Override
@@ -166,11 +162,11 @@ public class Analysis implements DetailedYaplListener {
     symbolTable.closeScope();
     isLocal = false;
 
-    if (!symbolTable.get(name).type.equals("void") && !hasReturn) {
+    if (!symbolTable.get(name).type.equals(Symbol.VOID) && !hasReturn) {
       errors.add(CompilerErrors.MissingReturn(programName, name, ctx.block().stop));
     }
 
-    this.procedureName = UNDEFINED;
+    this.procedureName = Symbol.UNDEFINED;
   }
 
   @Override
@@ -209,13 +205,13 @@ public class Analysis implements DetailedYaplListener {
   public void exitReturnStatement(ReturnStatementContext ctx) {
     this.hasReturn = true;
 
-    if (procedureName == UNDEFINED && ctx.expression() != null) {
+    if (procedureName == Symbol.UNDEFINED && ctx.expression() != null) {
       errors.add( CompilerErrors.IllegalRetValMain(programName, ctx.expression().start) );
     }
-    else if (procedureName != UNDEFINED && ctx.expression() != null) {
+    else if (procedureName != Symbol.UNDEFINED && ctx.expression() != null) {
       final Symbol returnSym = symbolTrace.pop();
       
-      if (symbolTable.get(procedureName).type.equals("void")) {
+      if (symbolTable.get(procedureName).type.equals(Symbol.VOID)) {
         errors.add( CompilerErrors.IllegalRetValProc(programName, procedureName, ctx.expression().start) );
       }
       else if (!returnSym.type.equals(symbolTable.get(procedureName).type) && !returnSym.isError()) {
@@ -223,7 +219,7 @@ public class Analysis implements DetailedYaplListener {
         errors.add( CompilerErrors.InvalidReturnType(programName, procedureName, token) );
       }
     }
-    else if (ctx.expression() == null && procedureName != UNDEFINED && !symbolTable.get(procedureName).type.equals("void")) {
+    else if (ctx.expression() == null && procedureName != Symbol.UNDEFINED && !symbolTable.get(procedureName).type.equals(Symbol.VOID)) {
       Token token = (ctx.expression() != null) ? ctx.expression().start : ctx.stop;
       errors.add( CompilerErrors.InvalidReturnType(programName, procedureName, token) );
     }
@@ -243,7 +239,7 @@ public class Analysis implements DetailedYaplListener {
   public void exitIfStatement(IfStatementContext ctx) {
     Symbol sym = symbolTrace.pop();
 
-    if (!sym.isError() && !sym.type.equals("bool")) {
+    if (!sym.isError() && !sym.type.equals(Symbol.BOOL)) {
       errors.add( CompilerErrors.CondNotBool(programName, ctx.expression().start) );
     }
   }
@@ -252,7 +248,7 @@ public class Analysis implements DetailedYaplListener {
   public void exitWhileStatement(WhileStatementContext ctx) {
     Symbol sym = symbolTrace.pop();
 
-    if (!sym.isError() && !sym.type.equals("bool")) {
+    if (!sym.isError() && !sym.type.equals(Symbol.BOOL)) {
       errors.add( CompilerErrors.CondNotBool(programName, ctx.expression().start) );
     }
   }
@@ -261,7 +257,7 @@ public class Analysis implements DetailedYaplListener {
   public void exitUnaryExpr(UnaryExprContext ctx) {
     final Symbol sym = symbolTrace.peek();
 
-    if (ctx.sign != null && !sym.isError() && !sym.type.equals("int")) {
+    if (ctx.sign != null && !sym.isError() && !sym.type.equals(Symbol.INT)) {
       errors.add( CompilerErrors.IllegalOp1Type(programName, ctx.sign.getText(), ctx.sign) );
       symbolTrace.pop();
       symbolTrace.push( new Symbol.Error() );
@@ -273,12 +269,12 @@ public class Analysis implements DetailedYaplListener {
     final Symbol rhs = symbolTrace.pop();
     final Symbol lhs = symbolTrace.pop();
 
-    if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals("int") && rhs.type.equals("int"))) {
+    if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals(Symbol.INT) && rhs.type.equals(Symbol.INT))) {
       errors.add( CompilerErrors.IllegalOp2Type(programName, ctx.op.getText(), ctx.op) );
       symbolTrace.push( new Symbol.Error() );
     }
 
-    symbolTrace.push( new Symbol.Expression("int") );
+    symbolTrace.push( new Symbol.Expression(Symbol.INT) );
   }
 
   @Override
@@ -286,12 +282,12 @@ public class Analysis implements DetailedYaplListener {
     final Symbol rhs = symbolTrace.pop();
     final Symbol lhs = symbolTrace.pop();
 
-    if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals("int") && rhs.type.equals("int"))) {
+    if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals(Symbol.INT) && rhs.type.equals(Symbol.INT))) {
       errors.add( CompilerErrors.IllegalRelOpType(programName, ctx.op.getText(), ctx.op) );
       symbolTrace.push( new Symbol.Error() );
     }
 
-    symbolTrace.push( new Symbol.Expression("bool") );
+    symbolTrace.push( new Symbol.Expression(Symbol.BOOL) );
   }
 
   @Override
@@ -304,7 +300,7 @@ public class Analysis implements DetailedYaplListener {
       symbolTrace.push( new Symbol.Error() );
     }
 
-    symbolTrace.push( new Symbol.Expression("bool") );
+    symbolTrace.push( new Symbol.Expression(Symbol.BOOL) );
   }
 
   @Override
@@ -312,35 +308,35 @@ public class Analysis implements DetailedYaplListener {
     final Symbol rhs = symbolTrace.pop();
     final Symbol lhs = symbolTrace.pop();
 
-    if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals("bool") && rhs.type.equals("bool"))) {
+    if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals(Symbol.BOOL) && rhs.type.equals(Symbol.BOOL))) {
       errors.add( CompilerErrors.IllegalOp2Type(programName, ctx.op.getText(), ctx.op) );
       symbolTrace.push( new Symbol.Error() );
     }
 
-    symbolTrace.push( new Symbol.Expression("bool") );
+    symbolTrace.push( new Symbol.Expression(Symbol.BOOL) );
   }
 
   @Override
   public void exitProcedureCall(ProcedureCallContext ctx) {
     final String fnName = ctx.Id().getText();
+    boolean error = false;
 
     if (!symbolTable.contains(fnName)) {
       errors.add( CompilerErrors.IdentNotDecl(programName, fnName, ctx.Id().getSymbol()) );
-      
-      for (int i = 0; i < ctx.expression().size(); i++)
-        symbolTrace.pop();
-
-      if (ctx.getParent() instanceof PrimaryExprContext)
-        symbolTrace.push( new Symbol.Error() );
-      return;
+      error = true;
     }
 
     if (!symbolTable.get(fnName).isFunction()) {
       errors.add( CompilerErrors.SymbolIllegalUse(programName, fnName, symbolTable.get(fnName).kind, ctx.Id().getSymbol()) );
-      
+      error = true;
+    }
+
+    if (error) {
+      // clean up symboltrace
       for (int i = 0; i < ctx.expression().size(); i++)
         symbolTrace.pop();
 
+      // expressions should return symbols for the type
       if (ctx.getParent() instanceof PrimaryExprContext)
         symbolTrace.push( new Symbol.Error() );
       return;
@@ -351,15 +347,16 @@ public class Analysis implements DetailedYaplListener {
     if (ctx.expression().size() < fn.params.size()) {
       errors.add( CompilerErrors.TooFewArgs(programName, fnName, ctx.stop) );
       
+      // clean up symboltrace
       for (int i = 0; i < ctx.expression().size(); i++)
         symbolTrace.pop();
 
+      // expressions should return symbols for the type
       if (ctx.getParent() instanceof PrimaryExprContext)
         symbolTrace.push( new Symbol.Error() );
       return;
     }
 
-    boolean error = false; 
     Stack<Symbol> args = new Stack<>();
     for (int i = 0; i < ctx.expression().size(); i++)
       args.push( symbolTrace.pop() );
@@ -376,11 +373,12 @@ public class Analysis implements DetailedYaplListener {
       idx++;
     }
 
-    if (fn.type.equals("void") && ctx.getParent() instanceof PrimaryExprContext) {
+    if (fn.type.equals(Symbol.VOID) && ctx.getParent() instanceof PrimaryExprContext) {
       errors.add( CompilerErrors.ProcNotFuncExpr(programName, fnName, ctx.start) );
       error = true;
     }
     
+    // expressions should return symbols for the type
     if (ctx.getParent() instanceof PrimaryExprContext)
       symbolTrace.push( error ? new Symbol.Error() : new Symbol.Expression(fn.type) );
   }
@@ -393,7 +391,7 @@ public class Analysis implements DetailedYaplListener {
     for (int i = 0; i < ctx.expression().size(); i++) {
       final Symbol expr = symbolTrace.pop();
 
-      if (!expr.isError() && !expr.type.equals("int")) {
+      if (!expr.isError() && !expr.type.equals(Symbol.INT)) {
         errors.add( CompilerErrors.BadArraySelector(programName, ctx.expression(ctx.expression().size() - 1 - i).start) );
         error = true;
       }
@@ -402,7 +400,7 @@ public class Analysis implements DetailedYaplListener {
     }
 
     final Symbol baseType = symbolTrace.pop();
-    if (ctx.expression().size() == 0 && !baseType.isError() && (baseType.type.equals("int") || baseType.type.equals("bool"))) {
+    if (ctx.expression().size() == 0 && !baseType.isError() && (baseType.type.equals(Symbol.INT) || baseType.type.equals(Symbol.BOOL))) {
       errors.add( CompilerErrors.InvalidNewType(programName, ctx.baseType().start) );
       error = true;
     }
@@ -419,11 +417,12 @@ public class Analysis implements DetailedYaplListener {
       symbolTrace.push( new Symbol.Error() );
     }
 
-    symbolTrace.push( new Symbol.Expression("int") );
+    symbolTrace.push( new Symbol.Expression(Symbol.INT) );
   }
 
   @Override
   public void beforeSelector(ParseTree ctx) {
+    // first part of the full identifier
     if (ctx instanceof FullIdentifierContext) {
       FullIdentifierContext fictx = (FullIdentifierContext)ctx;
       final String name = fictx.Id().getText();
@@ -443,9 +442,11 @@ public class Analysis implements DetailedYaplListener {
 
       symbolTrace.push( symbolTable.get(name) );
     }
+    // selector part of the identifier
     else {
       SelectorContext sctx = (SelectorContext)ctx;
 
+      // record selector
       if (sctx.Id() != null) {
         Symbol id = symbolTrace.pop();
 
@@ -465,6 +466,7 @@ public class Analysis implements DetailedYaplListener {
   
         symbolTrace.push(selId);
       }
+      // array selector
       else {
         Symbol expr = symbolTrace.pop();
         Symbol id = symbolTrace.peek();
@@ -476,7 +478,7 @@ public class Analysis implements DetailedYaplListener {
           return;
         }
   
-        if (!expr.isError() && !expr.type.equals("int")) {
+        if (!expr.isError() && !expr.type.equals(Symbol.INT)) {
           errors.add( CompilerErrors.BadArraySelector(programName, sctx.expression().start) );
           symbolTrace.pop();
           symbolTrace.push( new Symbol.Error() );
@@ -523,9 +525,9 @@ public class Analysis implements DetailedYaplListener {
   @Override
   public void exitLiteral(LiteralContext ctx) {
     if (ctx.Boolean() != null)
-      symbolTrace.push(new Symbol.Expression("bool", ctx.Boolean().getText()));
+      symbolTrace.push(new Symbol.Expression(Symbol.BOOL, ctx.Boolean().getText()));
     else
-      symbolTrace.push(new Symbol.Expression("int", ctx.Number().getText()));
+      symbolTrace.push(new Symbol.Expression(Symbol.INT, ctx.Number().getText()));
   }
 
 }

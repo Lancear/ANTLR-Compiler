@@ -1,0 +1,12 @@
+Program test00
+Declare
+	bool a;
+	bool b;
+  bool c;
+Begin
+	a := False;
+	b := True;
+	c := True;
+	writebool(a Or b And c);
+	writeln();
+End test00.

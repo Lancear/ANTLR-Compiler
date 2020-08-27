@@ -1,6 +1,7 @@
 package codegen;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,6 +23,10 @@ public class JvmBackend extends Backend {
   public final static JvmBackend instance = new JvmBackend();
 
   protected final String UNDEFINED = "<?>";
+  protected final String AND = "And";
+  protected final String OR = "Or";
+  protected final String START = "start";
+  protected final String END = "end";
 
   protected JvmBackend() {
   }
@@ -33,6 +38,8 @@ public class JvmBackend extends Backend {
   protected InnerClasses innerClasses = null;
   protected JvmClass record = null;
   protected List<JvmClass> records = new ArrayList<>();
+  protected Stack<String> boolOperators = new Stack<>();
+  protected Stack<Integer> boolOperandsCount = new Stack<>();
 
   protected Stack<Map<String, String>> labels;
   protected Map<Symbol.Variable, Integer> locals;
@@ -109,7 +116,7 @@ public class JvmBackend extends Backend {
   }
 
   public JvmBackend enterRecord(String name) {
-    this.record = new jvm_class_generator.impl.JvmClass(program.name() + "$" + capitalise(name), Descriptor.NAME_OF(Object.class), AccessFlags.PUBLIC | AccessFlags.SUPER);
+    this.record = new jvm_class_generator.impl.JvmClass(getFullRecordName(name), Descriptor.NAME_OF(Object.class), AccessFlags.PUBLIC | AccessFlags.SUPER);
     return this;
   }
 
@@ -130,27 +137,16 @@ public class JvmBackend extends Backend {
   }
 
   public JvmBackend loadConstant(Symbol.Const sym) {
-    if (sym.type.equals("string")) {
+    if (sym.type.equals(Symbol.STRING)) {
       code.ldc( consts.addString(sym.value) );
       return this;
     }
     
-    if (sym.type.equals("bool")) {
-      switch (boolOp) {
-        case UNDEFINED:
-          if (sym.value.equals("True")) code.iconst_1();
-          else code.iconst_0();
-          break;
+    if (sym.type.equals(Symbol.BOOL)) {
+      if (sym.value.equals(Symbol.TRUE)) code.iconst_1();
+      else code.iconst_0();
 
-        case "or":
-          if (sym.value.equals("True")) code.gotoLabel(labels.peek().get("true"));
-          break;
-
-        case "and":
-          if (sym.value.equals("False")) code.gotoLabel(labels.peek().get("false"));
-          break;
-      }
-
+      if (boolOperators.size() > 0) connectBoolOperand();
       return this;
     }
 
@@ -179,12 +175,12 @@ public class JvmBackend extends Backend {
 
   public JvmBackend store(Symbol.Variable sym) {
     if (sym.name.endsWith("[]")) {
-      if (sym.type.equals("bool")) code.bastore();
-      else if (sym.type.equals("int")) code.iastore();
+      if (sym.type.equals(Symbol.BOOL)) code.bastore();
+      else if (sym.type.equals(Symbol.INT)) code.iastore();
       else code.aastore();
     }
     else if (sym.name.contains(".")) {
-      final String record = program.name() + "$" + capitalise(sym.recordType);
+      final String record = getFullRecordName(sym.recordType);
       final String[] name = sym.name.split("\\.");
       code.putField( consts.addFieldref(record, name[name.length - 1], getTypeDescriptor(sym.type)) );
     }
@@ -219,12 +215,12 @@ public class JvmBackend extends Backend {
 
   public JvmBackend load(Symbol.Variable sym) {
     if (sym.name.endsWith("[]")) {
-      if (sym.type.equals("bool")) code.baload();
-      else if (sym.type.equals("int")) code.iaload();
+      if (sym.type.equals(Symbol.BOOL)) code.baload();
+      else if (sym.type.equals(Symbol.INT)) code.iaload();
       else code.aaload();
     }
     else if (sym.name.contains(".")) {
-      final String record = program.name() + "$" + capitalise(sym.recordType);
+      final String record = getFullRecordName(sym.recordType);
       final String[] name = sym.name.split("\\.");
       code.getField( consts.addFieldref(record, name[name.length - 1], getTypeDescriptor(sym.type)) );
     }
@@ -251,12 +247,21 @@ public class JvmBackend extends Backend {
       }
     }
 
-    if (sym.type.equals("bool") && boolOp.equals("or")) {
-      code.ifne(labels.peek().get("true"));
-    }
-    else if (sym.type.equals("bool") && boolOp.equals("and")) {
-      code.ifeq(labels.peek().get("false"));
-    }
+    if (sym.type.equals(Symbol.BOOL) && boolOperators.size() > 0) connectBoolOperand();
+    return this;
+  }
+
+  public JvmBackend write() {
+    String System = Descriptor.NAME_OF(System.class);
+    String PrintStream = Descriptor.NAME_OF(PrintStream.class);
+
+    int systemOut = consts.addFieldref(System, "out", Descriptor.REFERENCE(PrintStream));
+    int printString = consts.addMethodref(PrintStream, "print", Descriptor.METHOD(Descriptor.VOID, Descriptor.STRING));
+
+    code
+      .getStatic(systemOut)
+      .swap()
+      .invokeVirtual(printString);
 
     return this;
   }
@@ -265,6 +270,8 @@ public class JvmBackend extends Backend {
     final String className = fn.isStdLib ? stdlib.filename : program.name();
     final int methodRef = consts.addMethodref(className, fn.name, getMethodDescriptor(fn));
     code.invokeStatic(methodRef);
+
+    if (fn.type.equals(Symbol.BOOL) && boolOperators.size() > 0) connectBoolOperand();
     return this;
   }
 
@@ -276,49 +283,26 @@ public class JvmBackend extends Backend {
     return this;
   }
 
-  protected String boolOp = UNDEFINED;
-
-  public JvmBackend start() {
+  public JvmBackend startBranchingBlock() {
     labels.push(new HashMap<>());
 
     final String startLbl = nextLabel();
-    labels.peek().put("start", startLbl);
+    labels.peek().put(START, startLbl);
     code.addLabel(startLbl);
 
-    labels.peek().put("end", nextLabel());
+    labels.peek().put(END, nextLabel());
     return this;
   }
 
-  public JvmBackend end() {
-    if (boolOp.equals("and")) {
-      code
-        .iconst_1()
-        .gotoLabel(labels.peek().get("end"))
-        .addLabel(labels.peek().get("false"), labels.peek().get("start"))
-        .iconst_0()
-        .addLabel(labels.peek().get("end"));
-
-      boolOp = UNDEFINED;
-    }
-    else if (boolOp.equals("or")) {
-      code
-        .iconst_0()
-        .gotoLabel(labels.peek().get("end"))
-        .addLabel(labels.peek().get("true"), labels.peek().get("start"))
-        .iconst_1()
-        .addLabel(labels.peek().get("end"));
-
-      boolOp = UNDEFINED;
-    }
-    else {
-      code.addLabel(labels.peek().get("end"), labels.peek().get("start"));
-    }
-
+  public JvmBackend endBranchingBlock() {
+    code.addLabel(labels.peek().get(END), labels.peek().get(START));
     labels.pop();
     return this;
   }
 
   public JvmBackend op2(String op) {
+    String resetlbl, truelbl, endlbl;
+
     switch (op) {
       case "+":
         code.iadd();
@@ -340,96 +324,130 @@ public class JvmBackend extends Backend {
         code.irem();
         break;
 
-      case "Or":
-        if (!boolOp.equals("or")) {
-          final String trueLbl = nextLabel();
-          labels.peek().put("true", trueLbl);
-          
-          if (boolOp.equals("and")) {
-            code
-              .gotoLabel(trueLbl)
-              .addLabel(labels.peek().get("false"), labels.peek().get("start"));
-          }
+      case OR:
+        boolOperators.push(OR);
+        boolOperandsCount.push(0);
+        labels.push(new HashMap<>());
 
-          boolOp = "or";
-        }
+        labels.peek().put(START, nextLabel());
+        labels.peek().put(Symbol.TRUE, nextLabel());
+        labels.peek().put(END, nextLabel());
 
+        code.addLabel(labels.peek().get(START));
         break;
 
-      case "And":
-        if (!boolOp.equals("and")) {
-          final String falseLbl = nextLabel();
-          labels.peek().put("false", falseLbl);
+      case AND:
+        boolOperators.push(AND);
+        boolOperandsCount.push(0);
+        labels.push(new HashMap<>());
 
-          if (boolOp.equals("or")) {
-            code
-              .gotoLabel(falseLbl)
-              .addLabel(labels.peek().get("true"), labels.peek().get("start"));
-          }
+        labels.peek().put(START, nextLabel());
+        labels.peek().put(Symbol.FALSE, nextLabel());
+        labels.peek().put(END, nextLabel());
 
-          boolOp = "and";
-        }
-
+        code.addLabel(labels.peek().get(START));
         break;
 
       case "==":
-        if (boolOp.equals(UNDEFINED)) {
-          boolOp = "or";
-          labels.peek().put("true", nextLabel());
-        }
-        
-        if (boolOp.equals("and")) code.if_icmpne(labels.peek().get("false"));
-        else code.if_icmpeq(labels.peek().get("true"));
+        resetlbl = nextLabel();
+        truelbl = nextLabel();
+        endlbl = nextLabel();
+
+        code
+          .if_icmpeq(truelbl)
+          .addLabel(resetlbl)
+          .iconst_0()
+          .gotoLabel(endlbl)
+          .addLabel(truelbl, resetlbl)
+          .iconst_1()
+          .addLabel(endlbl);
+
+        if (boolOperators.size() > 0) connectBoolOperand();
         break;
 
       case "!=":
-        if (boolOp.equals(UNDEFINED)) {
-          boolOp = "or";
-          labels.peek().put("true", nextLabel());
-        }
+        resetlbl = nextLabel();
+        truelbl = nextLabel();
+        endlbl = nextLabel();
 
-        if (boolOp.equals("and")) code.if_icmpeq(labels.peek().get("false"));
-        else code.if_icmpne(labels.peek().get("true"));
+        code
+          .if_icmpne(truelbl)
+          .addLabel(resetlbl)
+          .iconst_0()
+          .gotoLabel(endlbl)
+          .addLabel(truelbl, resetlbl)
+          .iconst_1()
+          .addLabel(endlbl);
+
+        if (boolOperators.size() > 0) connectBoolOperand();
         break;
 
       case ">":
-        if (boolOp.equals(UNDEFINED)) {
-          boolOp = "or";
-          labels.peek().put("true", nextLabel());
-        }
-        
-        if (boolOp.equals("and")) code.if_icmple(labels.peek().get("false"));
-        else code.if_icmpgt(labels.peek().get("true"));
+        resetlbl = nextLabel();
+        truelbl = nextLabel();
+        endlbl = nextLabel();
+
+        code
+          .if_icmpgt(truelbl)
+          .addLabel(resetlbl)
+          .iconst_0()
+          .gotoLabel(endlbl)
+          .addLabel(truelbl, resetlbl)
+          .iconst_1()
+          .addLabel(endlbl);
+
+        if (boolOperators.size() > 0) connectBoolOperand();
         break;
 
       case "<":
-        if (boolOp.equals(UNDEFINED)) {
-          boolOp = "or";
-          labels.peek().put("true", nextLabel());
-        }
-        
-        if (boolOp.equals("and")) code.if_icmpge(labels.peek().get("false"));
-        else code.if_icmplt(labels.peek().get("true"));
+        resetlbl = nextLabel();
+        truelbl = nextLabel();
+        endlbl = nextLabel();
+
+        code
+          .if_icmplt(truelbl)
+          .addLabel(resetlbl)
+          .iconst_0()
+          .gotoLabel(endlbl)
+          .addLabel(truelbl, resetlbl)
+          .iconst_1()
+          .addLabel(endlbl);
+
+        if (boolOperators.size() > 0) connectBoolOperand();
         break;
 
       case ">=":
-        if (boolOp.equals(UNDEFINED)) {
-          boolOp = "or";
-          labels.peek().put("true", nextLabel());
-        }
+        resetlbl = nextLabel();
+        truelbl = nextLabel();
+        endlbl = nextLabel();
 
-        if (boolOp.equals("and")) code.if_icmplt(labels.peek().get("false"));
-        else code.if_icmpge(labels.peek().get("true"));
+        code
+          .if_icmpge(truelbl)
+          .addLabel(resetlbl)
+          .iconst_0()
+          .gotoLabel(endlbl)
+          .addLabel(truelbl, resetlbl)
+          .iconst_1()
+          .addLabel(endlbl);
+
+        if (boolOperators.size() > 0) connectBoolOperand();
         break;
 
       case "<=":
-        if (boolOp.equals(UNDEFINED)) {
-          boolOp = "or";
-          labels.peek().put("true", nextLabel());
-        }
+        resetlbl = nextLabel();
+        truelbl = nextLabel();
+        endlbl = nextLabel();
 
-        if (boolOp.equals("and")) code.if_icmpgt(labels.peek().get("false"));
-        else code.if_icmple(labels.peek().get("true"));
+        code
+          .if_icmple(truelbl)
+          .addLabel(resetlbl)
+          .iconst_0()
+          .gotoLabel(endlbl)
+          .addLabel(truelbl, resetlbl)
+          .iconst_1()
+          .addLabel(endlbl);
+
+        if (boolOperators.size() > 0) connectBoolOperand();
         break;
     }
 
@@ -445,12 +463,12 @@ public class JvmBackend extends Backend {
 
       code.multianewArray( consts.addClass(descriptor), dimensions );
     }
-    else if (baseType.equals("int") || baseType.equals("bool")) {
-      int arrType = baseType.equals("int") ? ArrayType.INT : ArrayType.BOOLEAN;
+    else if (baseType.equals(Symbol.INT) || baseType.equals(Symbol.BOOL)) {
+      int arrType = baseType.equals(Symbol.INT) ? ArrayType.INT : ArrayType.BOOLEAN;
       code.newArray(arrType);
     }
     else {
-      code.anewArray( consts.addClass(program.name() + "$" + capitalise(baseType)) );
+      code.anewArray( consts.addClass(getFullRecordName(baseType)) );
     }
 
     return this;
@@ -462,14 +480,14 @@ public class JvmBackend extends Backend {
   }
 
   public JvmBackend branch() {
-    code.ifeq(labels.peek().get("end"));
+    code.ifeq(labels.peek().get(END));
     return this;
   }
 
   public JvmBackend elseBranch() {
-    String elseLbl = labels.peek().get("end");
+    String elseLbl = labels.peek().get(END);
     String endLbl = nextLabel();
-    labels.peek().put("end", endLbl);
+    labels.peek().put(END, endLbl);
 
     code
       .gotoLabel(endLbl)
@@ -479,7 +497,7 @@ public class JvmBackend extends Backend {
   }
 
   public JvmBackend loop() {
-    code.gotoLabel(labels.peek().get("start"));
+    code.gotoLabel(labels.peek().get(START));
     return this;
   }
 
@@ -505,14 +523,49 @@ public class JvmBackend extends Backend {
   }
 
   public JvmBackend newRecord(String type) {
-    final String name = program.name() + "$" + capitalise(type);
+    final String name = getFullRecordName(type);
 
     code
-      .anew( consts.addClass( program.name() + "$" + capitalise(type) ) )
+      .anew( consts.addClass( getFullRecordName(type) ) )
       .dup()
       .invokeSpecial( consts.addMethodref(name, "<init>", Descriptor.METHOD(Descriptor.VOID)) );
 
     return this;
+  }
+
+
+
+  protected void connectBoolOperand() {
+    int operandNr = boolOperandsCount.pop() + 1;
+    boolOperandsCount.push(operandNr);
+
+    if (boolOperators.peek().equals(OR)) code.ifne(labels.peek().get(Symbol.TRUE));
+    else code.ifeq(labels.peek().get(Symbol.FALSE));
+
+    if (operandNr == 2) {
+      if (boolOperators.peek().equals(OR)) {
+        code
+          .iconst_0()
+          .gotoLabel(labels.peek().get(END))
+          .addLabel(labels.peek().get(Symbol.TRUE), labels.peek().get(START))
+          .iconst_1()
+          .addLabel(labels.peek().get(END));
+      }
+      else {
+        code
+          .iconst_1()
+          .gotoLabel(labels.peek().get(END))
+          .addLabel(labels.peek().get(Symbol.FALSE), labels.peek().get(START))
+          .iconst_0()
+          .addLabel(labels.peek().get(END));
+      }
+
+      labels.pop();
+      boolOperators.pop();
+      boolOperandsCount.pop();
+
+      if (boolOperandsCount.size() > 0) connectBoolOperand();
+    }
   }
 
 
@@ -552,21 +605,25 @@ public class JvmBackend extends Backend {
 
   protected String getBaseTypeDescriptor(String type) {
     switch (type) {
-      case "int":
+      case Symbol.INT:
         return Descriptor.INT;
 
-      case "bool":
+      case Symbol.BOOL:
         return Descriptor.BOOLEAN;
 
-      case "string":
+      case Symbol.STRING:
         return Descriptor.STRING;
 
-      case "void":
+      case Symbol.VOID:
         return Descriptor.VOID;
 
       default:
-        return Descriptor.REFERENCE(program.name() + "$" + capitalise(type));
+        return Descriptor.REFERENCE(getFullRecordName(type));
     }
+  }
+
+  protected String getFullRecordName(String record) {
+    return program.name() + "$" + capitalise(record);
   }
 
   protected String capitalise(String str) {

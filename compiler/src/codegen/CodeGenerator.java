@@ -3,8 +3,6 @@ package codegen;
 import java.io.IOException;
 import java.nio.file.Paths;
 
-import java.util.List;
-
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
@@ -16,19 +14,13 @@ import stdlib.StandardLibrary;
 
 public class CodeGenerator extends YaplBaseVisitor<Symbol> {
 
-  protected final static String INT = "int";
-  protected final static String BOOL = "bool";
-  protected final static String STRING = "string";
-
   protected SymbolTable symboltable = null;
   protected Backend backend = null;
 
   public CodeGenerator(StandardLibrary stdlib, SymbolTable symbolTable, String outputDir, Backend backend) {
     backend.stdlib = stdlib;
     this.symboltable = symbolTable;
-    
     symbolTable.resetCursor();
-    symbolTable.add( new Symbol.Function("write", "void", List.of(new Symbol.Param("str", "string")), true) );
 
     this.backend = backend;
     backend.symbolTable = symboltable;
@@ -80,8 +72,8 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
     final String value = stringLiteral.substring(1, stringLiteral.length() - 1);
 
     backend
-      .loadConstant( new Symbol.Const("<literal>", "string", value) )
-      .callFunction( symboltable.get("write").asFunction() );
+      .loadConstant( new Symbol.Expression(Symbol.STRING, value) )
+      .write();
 
     return null;
   }
@@ -102,9 +94,8 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
   @Override
   public Symbol visitLiteral(LiteralContext ctx) {
     final Symbol.Const sym = (ctx.Boolean() != null) 
-      ? new Symbol.Const("<literal>", "bool", ctx.Boolean().getText())
-      : new Symbol.Const("<literal>", "int", ctx.Number().getText());
-
+      ? new Symbol.Expression(Symbol.BOOL, ctx.Boolean().getText())
+      : new Symbol.Expression(Symbol.INT, ctx.Number().getText());
 
     if (!(ctx.getParent() instanceof ConstDeclarationContext))
       backend.loadConstant(sym);
@@ -204,87 +195,47 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
 
   @Override
   public Symbol visitArithmeticExpr(ArithmeticExprContext ctx) {
+    final String op = ctx.op.getText();
+
     visit(ctx.expression(0));
     visit(ctx.expression(1));
-    
-    final String op = ctx.op.getText();
     backend.op2(op);
+
     return null;
   }
 
-  protected boolean isBoolExpr = false;
-
   @Override
   public Symbol visitComparison(ComparisonContext ctx) {
-    boolean isBoolRoot = !isBoolExpr;
-
-    if (isBoolRoot) {
-      backend.start();
-      isBoolExpr = true;
-    }
+    final String op = ctx.op.getText();
 
     visit(ctx.expression(0));
     visit(ctx.expression(1));
-    
-    final String op = ctx.op.getText();
     backend.op2(op);
-
-    if (isBoolRoot) {
-      backend.end();
-      isBoolExpr = false;
-    }
 
     return null;
   }
 
   @Override
   public Symbol visitEqualityComparison(EqualityComparisonContext ctx) {
-    boolean isBoolRoot = !isBoolExpr;
-
-    if (isBoolRoot) {
-      backend.start();
-      isBoolExpr = true;
-    }
+    final String op = ctx.op.getText();
 
     visit(ctx.expression(0));
     visit(ctx.expression(1));
-    
-    final String op = ctx.op.getText();
     backend.op2(op);
 
-    if (isBoolRoot) {
-      backend.end();
-      isBoolExpr = false;
-    }
-    
     return null;
   }
 
+  /**
+   * op first here, since the backend needs to know how to connect the 2 operand expressions in advance for lazy boolean evaluation.
+   */
   @Override
   public Symbol visitBooleanExpr(BooleanExprContext ctx) {
-    boolean isBoolRoot = !isBoolExpr;
-
-    if (isBoolRoot) {
-      backend.start();
-      isBoolExpr = true;
-    }
-
     final String op = ctx.op.getText();
-    if (!(ctx.expression(0) instanceof BooleanExprContext || ctx.expression(1) instanceof BooleanExprContext)) {
-      backend.op2(op);
-      visit(ctx.expression(0));
-      visit(ctx.expression(1));
-    }
-    else {
-      visit(ctx.expression(0));
-      backend.op2(op);
-      visit(ctx.expression(1));
-    }
 
-    if (isBoolRoot) {
-      backend.end();
-      isBoolExpr = false;
-    }
+    backend.op2(op);
+    visit(ctx.expression(0));
+    visit(ctx.expression(1));
 
     return null;
   }
@@ -315,7 +266,7 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
 
   @Override
   public Symbol visitIfStatement(IfStatementContext ctx) {
-    backend.start();
+    backend.startBranchingBlock();
     visit(ctx.expression());
     backend.branch();
     visitStatementList(ctx.statementList(0));
@@ -325,18 +276,18 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
       visitStatementList(ctx.elseStatementList);
     }
 
-    backend.end();
+    backend.endBranchingBlock();
     return null;
   }
 
   @Override
   public Symbol visitWhileStatement(WhileStatementContext ctx) {
-    backend.start();
+    backend.startBranchingBlock();
     visit(ctx.expression());
     backend.branch();
     visitStatementList(ctx.statementList());
     backend.loop();
-    backend.end();
+    backend.endBranchingBlock();
     return null;
   }
 

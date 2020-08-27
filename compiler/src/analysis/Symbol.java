@@ -6,11 +6,17 @@ import java.util.List;
 
 public abstract class Symbol {
 
-  public static String UNDEFINED = "<?>";
-  public static String INT = "int";
-  public static String BOOL = "bool";
-  public static String VOID = "void";
-  public static String STRING = "string";
+  /**
+   * UNDEFINED allows me to use {@code .equals()} without the chance of a {@code NullReferenceException}.
+   * This can be done since identifiers in YAPL cannot contain those pointy brackets.
+   */
+  public static final String UNDEFINED = "<?>";
+  public static final String INT = "int";
+  public static final String BOOL = "bool";
+  public static final String VOID = "void";
+  public static final String STRING = "string";
+  public static final String TRUE = "True";
+  public static final String FALSE = "False";
 
   public String kind = UNDEFINED;
   public String name = UNDEFINED;
@@ -76,6 +82,11 @@ public abstract class Symbol {
     
     public Const(String name, String type, String value) {
       super("constant", name, type);
+      this.value = value;
+    }
+
+    protected Const(String kind, String name, String type, String value) {
+      super(kind, name, type);
       this.value = value;
     }
 
@@ -180,17 +191,14 @@ public abstract class Symbol {
   }
 
   public static String EXPRESSION = "<expression>";
-  public static class Expression extends Symbol {
-
-    public String value = UNDEFINED;
+  public static class Expression extends Const {
 
     public Expression(String type) {
       this(type, UNDEFINED);
     }
 
     public Expression(String type, String value) {
-      super("expression", EXPRESSION, type);
-      this.value = value;
+      super(EXPRESSION, EXPRESSION, type, value);
     }
 
   }

@@ -16,10 +16,6 @@ import codegen.JvmBackend;
 import parser.YaplErrorListener;
 import parser.YaplLexer;
 import parser.YaplParser;
-// import semantic.SemanticChecker;
-// import app.CompilerErrors.CompilerError;
-// import codegen.CodeGenerator;
-// import codegen.JvmBackend;
 import stdlib.JvmStandardLibrary;
 
 
@@ -66,7 +62,7 @@ public class Main {
         return;
 
       // semantic analysis
-      Analysis analysis = new Analysis(parser, JvmStandardLibrary.instance);
+      Analysis analysis = new Analysis(JvmStandardLibrary.instance);
       ParseTreeWalker.DEFAULT.walk(new parser.DetailedYaplListenerAdapter(analysis), tree);
 
       for (CompilerError error : analysis.errors) {

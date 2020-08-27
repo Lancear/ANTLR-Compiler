@@ -24,18 +24,18 @@ public abstract class Backend {
   public abstract Backend enterRecord(String name);
   public abstract Backend exitRecord();
 
-
   public abstract Backend loadConstant(Symbol.Const sym);  
   public abstract Backend allocVariable(Symbol.Variable sym);
   public abstract Backend store(Symbol.Variable sym);
   public abstract Backend load(Symbol.Variable sym);
 
+  public abstract Backend write();
   public abstract Backend callFunction(Symbol.Function fn);
   public abstract Backend op1(String op);
   public abstract Backend op2(String op);
 
-  public abstract Backend start();
-  public abstract Backend end();
+  public abstract Backend startBranchingBlock();
+  public abstract Backend endBranchingBlock();
   public abstract Backend branch();
   public abstract Backend elseBranch();
   public abstract Backend loop();
