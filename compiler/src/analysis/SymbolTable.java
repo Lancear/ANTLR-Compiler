@@ -5,6 +5,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Stack;
 
+/**
+ * A tree of all the scopes and their symbols. Implemented as a tree instead of a stack so it can be reused for multiple compiler passes.
+ * In addition to the common symbol table methods it also provides methods to traverse the tree in later passes.
+ */
 public class SymbolTable {
 
   public final Scope root;
@@ -47,6 +51,21 @@ public class SymbolTable {
     return false;
   }
 
+  public SymbolTable remove(String name) {
+    Scope scope = currScope;
+
+    while (scope != null) {
+      if (scope.symbols.containsKey(name)) {
+        scope.symbols.remove(name);
+        return this;
+      }
+
+      scope = scope.parent;
+    }
+
+    return this;
+  }
+
   public SymbolTable openScope() {
     this.currScope = new Scope(currScope);
     return this;
@@ -65,10 +84,11 @@ public class SymbolTable {
     return this;
   }
 
-  public void resetCursor() {
+  public SymbolTable resetCursor() {
     this.currScope = root;
     this.branches.clear();
     this.branches.push(0);
+    return this;
   }
 
   public SymbolTable enterScope() {
@@ -85,6 +105,7 @@ public class SymbolTable {
   }
 
 
+  
   public static class Scope {
     
     public final Scope parent;

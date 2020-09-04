@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+/**
+ * This is the base class of all identifiers as well as some type/value information of expressions.
+ * This class is used for passing around information inside the compiler, everything inside the compiler works with symbols.
+ */
 public abstract class Symbol {
 
   /**
@@ -28,6 +32,11 @@ public abstract class Symbol {
     this.type = type;
   }
 
+  @Override
+  public String toString() {
+    return kind.toUpperCase() + " " + name + ", type: " + type;
+  }
+
   public boolean isPrimitive() {
     return (type.equals("int") || type.equals("bool"));
   }
@@ -36,8 +45,12 @@ public abstract class Symbol {
     return (this instanceof Variable);
   }
 
+  public boolean isParam() {
+    return (this instanceof Param);
+  }
+
   public boolean isConst() {
-    return (this instanceof Const);
+    return (this instanceof Const && !this.asConst().value.equals(UNDEFINED));
   }
 
   public boolean isRecord() {
@@ -54,6 +67,10 @@ public abstract class Symbol {
 
   public boolean isError() {
     return (this instanceof Error);
+  }
+
+  public boolean isExpression() {
+    return (this instanceof Expression);
   }
 
   public Variable asVariable() {
@@ -76,6 +93,8 @@ public abstract class Symbol {
     return (Expression)this;
   }
 
+
+
   public static class Const extends Symbol {
 
     public String value = UNDEFINED;
@@ -88,6 +107,11 @@ public abstract class Symbol {
     protected Const(String kind, String name, String type, String value) {
       super(kind, name, type);
       this.value = value;
+    }
+
+    @Override
+    public String toString() {
+      return super.toString() + ", value: " + value;
     }
 
   }
@@ -135,6 +159,11 @@ public abstract class Symbol {
       return new Variable(name + "[]", type.substring(0, type.length() - 2), isLocal);
     }
 
+    @Override
+    public String toString() {
+      return super.toString() + ", isLocal: " + isLocal;
+    }
+
   }
 
   public static class Param extends Variable {
@@ -164,23 +193,37 @@ public abstract class Symbol {
 
     public final List<Param> params;
     public final boolean isStdLib;
+    public boolean isPure = false;
+    public int uses = 0;
 
     public Function(String name, String type) {
       this(name, type, new ArrayList<>(), false);
     }
 
-    public Function(String name, String type, List<Param> params) {
-      this(name, type, params, false);
+    public Function(String name, String type, boolean isPure) {
+      super("procedure", name, type);
+      this.params = new ArrayList<>();
+      this.isPure = isPure;
+      this.isStdLib = false;
     }
 
     public Function(String name, String type, List<Param> params, boolean isStdLib) {
       super("procedure", name, type);
       this.params = params;
       this.isStdLib = isStdLib;
+      this.isPure = isStdLib;
+    }
+
+    @Override
+    public String toString() {
+      return super.toString() + ", isPure: " + isPure + ", uses: " + uses;
     }
 
   }
 
+  /**
+   * Used to pass around type information between methods of the {@code Analysis}
+   */
   public static String TYPE = "<type>";
   public static class Type extends Symbol {
 
@@ -190,6 +233,9 @@ public abstract class Symbol {
 
   }
 
+  /**
+   * Used for constant folding and passing types of expression between methods of the {@code Analysis}
+   */
   public static String EXPRESSION = "<expression>";
   public static class Expression extends Const {
 
@@ -198,11 +244,28 @@ public abstract class Symbol {
     }
 
     public Expression(String type, String value) {
-      super(EXPRESSION, EXPRESSION, type, value);
+      super("expression", EXPRESSION, type, value);
     }
 
+    public Expression(String name, String type, String value) {
+      super("expression", name, type, value);
+    }
+
+    public static String nameFor(int expressionHash, String text) {
+      return "<" + expressionHash + ":" + text + ">";
+    }
+
+    @Override
+    public String toString() {
+      String textPart = name.split(":")[1];
+      String text = textPart.substring(0, textPart.length() - 1);
+      return kind.toUpperCase() + " " + text + ", type: " + type + ", value: " + value;
+    }
   }
 
+  /**
+   * Used to indicate a child node had an error, so the parent node can skipp all errors related to that error.
+   */
   public static String ERROR = "<error>";
   public static class Error extends Symbol {
 

@@ -17,7 +17,7 @@ import jvm_class_generator.specs.class_content.Method;
 
 public class Code extends jvm_class_generator.specs.attributes.Code {
 
-  private Frame currFrame;
+  public Frame currFrame;
   private final Stack<Frame> frames;
 
   private final LinkedHashMap<String, Integer> labels;
@@ -118,6 +118,14 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     StackMapTable stackMapTable =  new jvm_class_generator.impl.attributes.StackMapTable(parent);
     stackMapTable.setFrames(frames);
     attributes.put(StackMapTable.name, stackMapTable);
+  }
+
+
+  public int allocLocal(String type) {
+    final int idx = currFrame.locals.size();
+    currFrame.locals.put(currFrame.locals.size(), type);
+    if (idx > maxLocalsIdx) maxLocalsIdx = idx;
+    return idx;
   }
 
 
@@ -376,8 +384,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
       code.writeShort(idx);
     }
 
-    currFrame.locals.put(idx, currFrame.stack.pop());
-    if (idx > maxLocalsIdx) maxLocalsIdx = idx;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -394,8 +401,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
       code.writeShort(idx);
     }
 
-    currFrame.locals.put(idx, currFrame.stack.pop());
-    if (idx > maxLocalsIdx) maxLocalsIdx = idx;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -403,8 +409,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     final int opcode = 0x3b;
     code.writeByte(opcode);
     
-    currFrame.locals.put(0, currFrame.stack.pop());
-    if (0 > maxLocalsIdx) maxLocalsIdx = 0;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -412,8 +417,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     final int opcode = 0x3c;
     code.writeByte(opcode);
     
-    currFrame.locals.put(1, currFrame.stack.pop());
-    if (1 > maxLocalsIdx) maxLocalsIdx = 1;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -421,8 +425,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     final int opcode = 0x3d;
     code.writeByte(opcode);
     
-    currFrame.locals.put(2, currFrame.stack.pop());
-    if (2 > maxLocalsIdx) maxLocalsIdx = 2;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -430,8 +433,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     final int opcode = 0x3e;
     code.writeByte(opcode);
     
-    currFrame.locals.put(3, currFrame.stack.pop());
-    if (3 > maxLocalsIdx) maxLocalsIdx = 3;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -439,8 +441,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     final int opcode = 0x4b;
     code.writeByte(opcode);
     
-    currFrame.locals.put(0, currFrame.stack.pop());
-    if (0 > maxLocalsIdx) maxLocalsIdx = 0;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -448,8 +449,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     final int opcode = 0x4c;
     code.writeByte(opcode);
     
-    currFrame.locals.put(1, currFrame.stack.pop());
-    if (1 > maxLocalsIdx) maxLocalsIdx = 1;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -457,8 +457,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     final int opcode = 0x4d;
     code.writeByte(opcode);
     
-    currFrame.locals.put(2, currFrame.stack.pop());
-    if (2 > maxLocalsIdx) maxLocalsIdx = 2;
+    currFrame.stack.pop();
     return this;
   }
 
@@ -466,8 +465,7 @@ public class Code extends jvm_class_generator.specs.attributes.Code {
     final int opcode = 0x4e;
     code.writeByte(opcode);
     
-    currFrame.locals.put(3, currFrame.stack.pop());
-    if (3 > maxLocalsIdx) maxLocalsIdx = 3;
+    currFrame.stack.pop();
     return this;
   }
 

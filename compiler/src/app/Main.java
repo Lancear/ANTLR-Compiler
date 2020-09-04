@@ -1,90 +1,91 @@
 package app;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
 import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import analysis.Analysis;
+import analysis.SymbolTable;
 import app.CompilerErrors.CompilerError;
 import codegen.CodeGenerator;
 import codegen.JvmBackend;
 import parser.YaplErrorListener;
 import parser.YaplLexer;
 import parser.YaplParser;
+import parser.YaplParser.ProgramContext;
+import profiler.JvmProfilerBackend;
+import profiler.Profiler;
+import profiler.SymbolDump;
 import stdlib.JvmStandardLibrary;
+import stdlib.StandardLibrary;
 
-
+/**
+ * The glue of the compiler which puts all components together to compile yapl to the given target language
+ */
 public class Main {
   
   public static void main(String[] args) {
+    Settings settings = Settings.parse(args);
+    if (settings == null) return;
+
+    compile(settings);
+  }
+
+  protected static void compile(Settings settings) {
     YaplErrorListener errorListener = new YaplErrorListener();
 
     try {
-      if (args.length < 1)
-        throw new IOException("Missing argument, input file!");
+      ProgramContext tree = parse(settings.sourceCode, errorListener);
+      if (tree == null) return;
 
-      if (args.length < 2)
-        throw new IOException("Missing argument, output directory!");
-       
-      if (Files.notExists( Paths.get(args[0]) ))
-        throw new IOException("Input file not found!");
+      SymbolTable symboltable = analyse(tree, JvmStandardLibrary.instance);
+      if (symboltable == null) return;
 
-      // input
-      CharStream input;
-      try {
-        input = CharStreams.fromFileName(args[0]);
+      if (settings.defaultCompile) {
+        CodeGenerator codegen = new CodeGenerator(symboltable, new JvmBackend(JvmStandardLibrary.instance, settings.outputDirectory));
+        codegen.visit(tree);
       }
-      catch(IOException ex) {
-        throw new IOException("Cannot read the input file!", ex);
+      else if (settings.profile) {
+        Profiler debugger = new Profiler(symboltable, settings, new JvmProfilerBackend(JvmStandardLibrary.instance, settings.outputDirectory));
+        debugger.visit(tree);
       }
 
-      // lexer
-      YaplLexer lexer = new YaplLexer(input);
-      CommonTokenStream tokens = new CommonTokenStream(lexer);
-      lexer.removeErrorListeners();
-      lexer.addErrorListener(errorListener);
-   
-      // parser
-      YaplParser parser = new YaplParser(tokens);
-      parser.removeErrorListeners();
-      parser.addErrorListener(errorListener);
-      parser.addParseListener(errorListener);
-      YaplParser.ProgramContext tree = parser.program();
-      
-      if (!errorListener.error)
-        System.out.println("YAPL compilation: [" + errorListener.programName + "] OK");
-      else
-        return;
+      System.out.println("YAPL compilation: [" + errorListener.programName + "] OK");
 
-      // semantic analysis
-      Analysis analysis = new Analysis(JvmStandardLibrary.instance);
-      ParseTreeWalker.DEFAULT.walk(new parser.DetailedYaplListenerAdapter(analysis), tree);
-
-      for (CompilerError error : analysis.errors) {
-        System.err.println( error );
-        System.err.println();
+      if (settings.symboldump) {
+        new SymbolDump(symboltable).visit(tree);
       }
-
-      // terminate the compiler if an error occured
-      if (analysis.errors.size() != 0) return;
-
-      // code generation
-      CodeGenerator codegen = new CodeGenerator(JvmStandardLibrary.instance, analysis.symbolTable, args[1], JvmBackend.instance);
-      codegen.visit(tree);
     }
-    catch (IOException ex) {
-      System.err.println( CompilerErrors.Lexical(errorListener.programName, ex.getLocalizedMessage(), 0, 0) );
+    catch (Exception ex) {
+      System.err.println( CompilerErrors.Internal(errorListener.programName, ex.getLocalizedMessage(), -1, -1) );
+      ex.printStackTrace();
       System.err.println();
     }
-    // catch (Exception ex) {
-    //   System.err.println( CompilerErrors.Internal(blockNameExtractor.programName, ex.getLocalizedMessage(), -1, -1) );
-    //   System.err.println();
-    // }
+  }
+
+  protected static ProgramContext parse(CharStream input, YaplErrorListener errorListener) {
+    YaplLexer lexer = new YaplLexer(input);
+    CommonTokenStream tokens = new CommonTokenStream(lexer);
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(errorListener);
+
+    YaplParser parser = new YaplParser(tokens);
+    parser.removeErrorListeners();
+    parser.addErrorListener(errorListener);
+    parser.addParseListener(errorListener);
+    return (errorListener.error) ? null : parser.program();
+  }
+
+  protected static SymbolTable analyse(ProgramContext tree, StandardLibrary stdlib) {
+    Analysis analysis = new Analysis(stdlib);
+    ParseTreeWalker.DEFAULT.walk(new parser.DetailedYaplListenerAdapter(analysis), tree);
+
+    for (CompilerError error : analysis.errors) {
+      System.err.println( error );
+      System.err.println();
+    }
+
+    return (analysis.errors.size() > 0) ? null : analysis.symboltable;
   }
 
 }

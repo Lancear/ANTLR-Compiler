@@ -53,7 +53,7 @@ public abstract class Code extends Attribute {
    * Adds a label at the current position in the code.
    * This label can be used to jump to.
    * The {@code Frame} is reset to the {@code Frame} of the parentLabel, 
-   * this allows for constructing {@code StackMapTable}s with alternatives
+   * this allows for constructing {@code StackMapTable}s with conditional branches which leave values on the stack
    * 
    * @param label ... the name of the label / jump location, <i>must be unique</i>
    * @param parentLabel ... the name of the parent label to reset the frame to, <i>must be resolved</i>
@@ -68,6 +68,14 @@ public abstract class Code extends Attribute {
    * @see jvm_class_generator.specs.attributes.StackMapTable StackMapTable
    */
   public abstract void addStackMapTableAttribute();
+
+
+  /**
+   * Allocates a local for the code.
+   * @param type ... the type of the local
+   * @return the index of the local
+   */
+  public abstract int allocLocal(String type);
 
 
   public Code(InfoStructure parent) {

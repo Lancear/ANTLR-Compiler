@@ -1,12 +1,23 @@
 Program test00
+
 Declare
-	bool a;
-	bool b;
-  bool c;
+	Const x = False;
+	Const y = 3;
+
+Procedure int square(int x)
 Begin
-	a := False;
-	b := True;
-	c := True;
-	writebool(a Or b And c);
+  Return y*x;
+End square;
+
+Begin
+	writebool(True == x);
+	writeln();
+	writebool(y + 4 + 12 <= 9 / 8 % (6 - 2));
+	writeln();
+	writebool(-y > 0 Or x == False And True);
+	writeln();
+	writeint(1 * 7 - square(13));
+	writeln();
+	writeint(-12 + -(15 - 25) - -y);
 	writeln();
 End test00.

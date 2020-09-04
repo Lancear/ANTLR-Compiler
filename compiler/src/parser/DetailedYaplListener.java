@@ -4,6 +4,10 @@ import org.antlr.v4.runtime.tree.ParseTree;
 
 import parser.YaplParser.*;
 
+/**
+ * This YaplListener interface has some additional more detailed events 
+ * and removed events for nodes which are only interesting for the parser.
+ */
 public interface DetailedYaplListener {
 
   void enterProgram(ProgramContext ctx);  

@@ -2,6 +2,10 @@ package app;
 
 import org.antlr.v4.runtime.Token;
 
+/**
+ * The original {@code CompilerError} class of the university Klagenfurt slightly modified.
+ * Transformed the ErrorNumber constants to their own "constructors" which set the error number and base of the error message already.
+ */
 public abstract class CompilerErrors {
 
 	public static class CompilerError {

@@ -14,6 +14,9 @@ import jvm_class_generator.specs.helpers.Descriptor;
 import analysis.SymbolTable;
 import analysis.Symbol;
 
+/**
+ * A JVM implementation for the {@code StandardLibrary}. It can easily be extended to give yapl programmers more IO functions.
+ */
 public class JvmStandardLibrary extends StandardLibrary {
   public final static StandardLibrary instance = new JvmStandardLibrary();
   protected JvmStandardLibrary() { }

@@ -10,7 +10,7 @@
       "request": "launch",
       "mainClass": "app.Main",
       "projectName": "compiler_79aa990",
-      "args": "./testfiles/codegen/test00.yapl ./output/test00"
+      "args": "--watch 39:43:52 --calltrace quicksort ./testfiles/quicksort.yapl ./output/quicksort"
     },
     {
       "type": "java",

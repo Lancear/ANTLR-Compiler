@@ -1,17 +1,13 @@
 package codegen;
 
 import java.io.IOException;
-import java.nio.file.Path;
 
 import analysis.Symbol;
-import analysis.SymbolTable;
-import stdlib.StandardLibrary;
 
-public abstract class Backend {
-  
-  public StandardLibrary stdlib = null;
-  public SymbolTable symbolTable = null;
-  public Path outputDir = null;
+/**
+ * Represents a simplified version of an intermediate representation which is implemented by all targets.
+ */
+public interface Backend {
 
   public abstract Backend enterProgram(String name);
   public abstract void exitProgram() throws IOException;
@@ -35,11 +31,11 @@ public abstract class Backend {
   public abstract Backend op2(String op);
 
   public abstract Backend startBranchingBlock();
-  public abstract Backend endBranchingBlock();
   public abstract Backend branch();
   public abstract Backend elseBranch();
   public abstract Backend loop();
-  public abstract Backend returnFunction();
+  public abstract Backend endBranchingBlock();
+  public abstract Backend returnFromFunction();
 
   public abstract Backend newArray(String baseType, int dimensions);
   public abstract Backend arraylength();

@@ -1,7 +1,6 @@
 package codegen;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -10,21 +9,20 @@ import analysis.Symbol;
 import analysis.SymbolTable;
 import parser.YaplBaseVisitor;
 import parser.YaplParser.*;
-import stdlib.StandardLibrary;
 
+/**
+ * Traverses the parse tree and class the given backend to generate the target code.
+ */
 public class CodeGenerator extends YaplBaseVisitor<Symbol> {
 
   protected SymbolTable symboltable = null;
   protected Backend backend = null;
 
-  public CodeGenerator(StandardLibrary stdlib, SymbolTable symbolTable, String outputDir, Backend backend) {
-    backend.stdlib = stdlib;
-    this.symboltable = symbolTable;
-    symbolTable.resetCursor();
+  public CodeGenerator(SymbolTable symboltable, Backend backend) {
+    this.symboltable = symboltable;
+    symboltable.resetCursor();
 
     this.backend = backend;
-    backend.symbolTable = symboltable;
-    backend.outputDir = Paths.get(outputDir);
   }
 
   @Override
@@ -195,34 +193,52 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
 
   @Override
   public Symbol visitArithmeticExpr(ArithmeticExprContext ctx) {
-    final String op = ctx.op.getText();
+    final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
 
-    visit(ctx.expression(0));
-    visit(ctx.expression(1));
-    backend.op2(op);
+    if (symboltable.contains(exprName) && symboltable.get(exprName).isConst()) {
+      backend.loadConstant( symboltable.get(exprName).asConst() );
+    }
+    else {
+      final String op = ctx.op.getText();
+      visit(ctx.expression(0));
+      visit(ctx.expression(1));
+      backend.op2(op);
+    }
 
     return null;
   }
 
   @Override
   public Symbol visitComparison(ComparisonContext ctx) {
-    final String op = ctx.op.getText();
+    final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
 
-    visit(ctx.expression(0));
-    visit(ctx.expression(1));
-    backend.op2(op);
+    if (symboltable.contains(exprName) && symboltable.get(exprName).isConst()) {
+      backend.loadConstant( symboltable.get(exprName).asConst() );
+    }
+    else {
+      final String op = ctx.op.getText();
+      visit(ctx.expression(0));
+      visit(ctx.expression(1));
+      backend.op2(op);
+    }
 
     return null;
   }
 
   @Override
   public Symbol visitEqualityComparison(EqualityComparisonContext ctx) {
-    final String op = ctx.op.getText();
+    final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
 
-    visit(ctx.expression(0));
-    visit(ctx.expression(1));
-    backend.op2(op);
-
+    if (symboltable.contains(exprName) && symboltable.get(exprName).isConst()) {
+      backend.loadConstant( symboltable.get(exprName).asConst() );
+    }
+    else {
+      final String op = ctx.op.getText();
+      visit(ctx.expression(0));
+      visit(ctx.expression(1));
+      backend.op2(op);
+    }
+    
     return null;
   }
 
@@ -231,12 +247,18 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
    */
   @Override
   public Symbol visitBooleanExpr(BooleanExprContext ctx) {
-    final String op = ctx.op.getText();
+    final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
 
-    backend.op2(op);
-    visit(ctx.expression(0));
-    visit(ctx.expression(1));
-
+    if (symboltable.contains(exprName) && symboltable.get(exprName).isConst()) {
+      backend.loadConstant( symboltable.get(exprName).asConst() );
+    }
+    else {
+      final String op = ctx.op.getText();
+      backend.op2(op);
+      visit(ctx.expression(0));
+      visit(ctx.expression(1));
+    }
+    
     return null;
   }
 
@@ -319,7 +341,7 @@ public class CodeGenerator extends YaplBaseVisitor<Symbol> {
     if (ctx.expression() != null)
       visit(ctx.expression());
     
-    backend.returnFunction();
+    backend.returnFromFunction();
     return null;
   }
 

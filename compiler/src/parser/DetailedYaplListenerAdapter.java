@@ -4,6 +4,10 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 import parser.YaplParser.*;
 
+/**
+ * This adapter allows you to use the {@code DetailedYaplListener} which has some additional more detailed events 
+ * and removed events for nodes which are only interesting for the parser.
+ */
 public class DetailedYaplListenerAdapter extends YaplBaseListener {
   
   public final DetailedYaplListener listener;

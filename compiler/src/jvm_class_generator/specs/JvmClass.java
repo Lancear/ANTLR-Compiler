@@ -115,7 +115,7 @@ public abstract class JvmClass implements InfoStructure {
    * 
    * @see jvm_class_generator.specs.Interface Interface
    */
-  protected final Collection<String> interfaces;
+  public final Collection<String> interfaces;
   
   /**
    * Adds an interface to the collection of direct superinterfaces of this class or interface type.
@@ -150,7 +150,7 @@ public abstract class JvmClass implements InfoStructure {
    * 
    * @see jvm_class_generator.specs.Field Field
    */
-  protected final Map<String, Field> fields;
+  public final Map<String, Field> fields;
 
   /** 
    * Creates and adds a field to the collection of fields.
@@ -203,7 +203,7 @@ public abstract class JvmClass implements InfoStructure {
    * 
    * @see jvm_class_generator.specs.Method Method
    */
-  protected final Map<String, Method> methods;
+  public final Map<String, Method> methods;
 
   /** 
    * Creates and adds a method to the collection of methods.

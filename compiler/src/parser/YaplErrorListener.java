@@ -21,6 +21,9 @@ import parser.YaplParser.ProcedureContext;
 import parser.YaplParser.ProgramContext;
 import parser.YaplParser.RecordDeclarationContext;
 
+/**
+ * Error listener for the parser and lexer which prints out customised error messages instead of the default ones from ANTLR.
+ */
 public class YaplErrorListener extends YaplBaseListener implements ANTLRErrorListener {
 
   public ParseTree parseTree;
@@ -40,8 +43,7 @@ public class YaplErrorListener extends YaplBaseListener implements ANTLRErrorLis
       Token token = (Token) offendingSymbol;
 
       String input = parser.getInputStream().getTokenSource().getInputStream().toString();
-      String errorMessage = "Path: " + getPath(parser) + "\nMessage: " + msg + "\nCode:\n"
-          + getUnderlinedCodeSnippet(input, token, 1);
+      String errorMessage = "Path: " + getPath(parser) + "\nMessage: " + msg + "\nCode:\n" + getUnderlinedCodeSnippet(input, token, 1);
 
       System.err.println(CompilerErrors.Syntax(programName, errorMessage, line, column + 1));
       System.err.println();
@@ -119,7 +121,7 @@ public class YaplErrorListener extends YaplBaseListener implements ANTLRErrorLis
 
     String shownLines = "";
     for (int idx = errorLineIdx; idx > 0 && idx > errorLineIdx - nrOfShownLines; idx--)
-      shownLines = lines[idx] + "\n" + shownLines;
+      shownLines = lines[idx].trim() + "\n" + shownLines;
 
     String underline = "";
 
@@ -133,18 +135,12 @@ public class YaplErrorListener extends YaplBaseListener implements ANTLRErrorLis
   }
 
   @Override
-  public void reportAmbiguity(Parser arg0, DFA arg1, int arg2, int arg3, boolean arg4, BitSet arg5, ATNConfigSet arg6) {
-
-  }
+  public void reportAmbiguity(Parser arg0, DFA arg1, int arg2, int arg3, boolean arg4, BitSet arg5, ATNConfigSet arg6) { }
 
   @Override
-  public void reportAttemptingFullContext(Parser arg0, DFA arg1, int arg2, int arg3, BitSet arg4, ATNConfigSet arg5) {
-
-  }
+  public void reportAttemptingFullContext(Parser arg0, DFA arg1, int arg2, int arg3, BitSet arg4, ATNConfigSet arg5) { }
 
   @Override
-  public void reportContextSensitivity(Parser arg0, DFA arg1, int arg2, int arg3, int arg4, ATNConfigSet arg5) {
-
-  }
+  public void reportContextSensitivity(Parser arg0, DFA arg1, int arg2, int arg3, int arg4, ATNConfigSet arg5) { }
 
 }

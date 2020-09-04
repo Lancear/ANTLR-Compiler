@@ -14,31 +14,59 @@ import parser.DetailedYaplListener;
 import parser.YaplParser.*;
 import stdlib.StandardLibrary;
 
+/**
+ * Creates a {@code SymbolTable}, with which it checks that every identifier is declared
+ * and used correctly according to its type and semantics.
+ * It also computes constant expressions and stores those in the SymbolTable.
+ * When the analyser detects an error, it is added to the list of errors and skips to the next statement to continue its checks there.
+ */
 public class Analysis implements DetailedYaplListener {
 
-  protected Stack<Symbol> symbolTrace;
-  public final SymbolTable symbolTable;
+  public final SymbolTable symboltable;
   public final List<CompilerError> errors;
 
+  /**
+   * Since a listener pattern does not have a way to return information to parent nodes,
+   * this stack is used to share information between nodes.
+   */
+  protected Stack<Symbol> symboltrace;
+
+  /**
+   * Indicates if the current scope is a local scope.
+   */
   protected boolean isLocal = false;
+
+  /**
+   * Used to reset {@code isLocal} to its previous value after a record, 
+   * since the scope containing record members isnt considered local.
+   */
   protected boolean wasLocal = false;
+
+  /**
+   * Indicates if the current function has a return statement.
+   */
   protected boolean hasReturn = false;
+
+  /**
+   * Indicates if the current function is pure i.e. does no IO and only accesses variables in its own scope.
+   */
+  protected boolean isPure = true;
 
   protected String programName = Symbol.UNDEFINED;
   protected String procedureName = Symbol.UNDEFINED;
   protected String recordName = Symbol.UNDEFINED;
 
   public Analysis(StandardLibrary stdlib) {
-    this.symbolTrace = new Stack<>();
-    this.symbolTable = new SymbolTable();
+    this.symboltrace = new Stack<>();
+    this.symboltable = new SymbolTable();
     this.errors = new ArrayList<>();
 
-    stdlib.addToSymbolTable(symbolTable);
+    stdlib.addToSymbolTable(symboltable);
   }
 
   @Override
   public void enterProgram(ProgramContext ctx) {
-    symbolTable.openScope();
+    symboltable.openScope();
   }
 
   @Override
@@ -55,99 +83,100 @@ public class Analysis implements DetailedYaplListener {
       errors.add(CompilerErrors.EndIdentMismatch(programName, name, endName, "program", ctx.Id(0).getSymbol()));
     }
 
-    symbolTable.closeScope();
+    symboltable.closeScope();
   }
 
   @Override
   public void exitVarDeclaration(VarDeclarationContext ctx) {
-    String type = symbolTrace.pop().type;
+    String type = symboltrace.pop().type;
 
     for (TerminalNode id : ctx.Id()) {
       String name = id.getText();
 
-      if (symbolTable.currScope.contains(name)) {
-        errors.add(CompilerErrors.SymbolExists(programName, name, symbolTable.get(name).kind, id.getSymbol()));
+      if (symboltable.currScope.contains(name)) {
+        errors.add(CompilerErrors.SymbolExists(programName, name, symboltable.get(name).kind, id.getSymbol()));
       }
 
       final Symbol symbol = new Symbol.Variable(name, type, isLocal);
-      symbolTable.add(symbol);
+      symboltable.add(symbol);
     }
   }
 
   @Override
   public void exitConstDeclaration(ConstDeclarationContext ctx) {
     final String name = ctx.Id().getText();
-    Symbol.Expression rhs = symbolTrace.pop().asExpression();
+    Symbol.Expression rhs = symboltrace.pop().asExpression();
 
-    if (symbolTable.currScope.contains(name)) {
-      errors.add(CompilerErrors.SymbolExists(programName, name, symbolTable.get(name).kind, ctx.Id().getSymbol()));
+    if (symboltable.currScope.contains(name)) {
+      errors.add(CompilerErrors.SymbolExists(programName, name, symboltable.get(name).kind, ctx.Id().getSymbol()));
     }
 
-    symbolTable.add(new Symbol.Const(name, rhs.type, rhs.value));
+    symboltable.add(new Symbol.Const(name, rhs.type, rhs.value));
   }
 
   @Override
   public void afterRecordId(RecordDeclarationContext ctx) {
     this.recordName = ctx.Id().getText();
 
-    if (symbolTable.currScope.contains(recordName)) {
-      errors.add(CompilerErrors.SymbolExists(programName, recordName, symbolTable.get(recordName).kind, ctx.Id().getSymbol()));
+    if (symboltable.currScope.contains(recordName)) {
+      errors.add(CompilerErrors.SymbolExists(programName, recordName, symboltable.get(recordName).kind, ctx.Id().getSymbol()));
     }
 
-    symbolTable.add(new Symbol.Record(recordName));
-    symbolTable.openScope();
+    symboltable.add(new Symbol.Record(recordName));
+    symboltable.openScope();
     wasLocal = isLocal;
     isLocal = false;
   }
 
   @Override
   public void exitRecordDeclaration(RecordDeclarationContext ctx) {
-    Symbol.Record record = symbolTable.get(recordName).asRecord();
+    Symbol.Record record = symboltable.get(recordName).asRecord();
 
-    for (Symbol sym : symbolTable.currScope.symbols.values()) {
+    for (Symbol sym : symboltable.currScope.symbols.values()) {
       record.fields.put(sym.name, (Symbol.Variable) sym);
     }
 
-    symbolTable.closeScope();
+    symboltable.closeScope();
     isLocal = wasLocal;
     this.recordName = Symbol.UNDEFINED;
   }
 
   @Override
   public void exitReturnType(ReturnTypeContext ctx) {
-    if (ctx.type() != null && !symbolTrace.peek().isError()) {
-      symbolTrace.pop();
-      symbolTrace.push(new Symbol.Type(ctx.getText()));
+    if (ctx.type() != null && !symboltrace.peek().isError()) {
+      symboltrace.pop();
+      symboltrace.push(new Symbol.Type(ctx.getText()));
     } else if (ctx.type() == null) {
-      symbolTrace.push(new Symbol.Type(ctx.getText()));
+      symboltrace.push(new Symbol.Type(ctx.getText()));
     }
   }
 
   @Override
   public void afterProcedureId(ProcedureContext ctx) {
     this.procedureName = ctx.Id(0).getText();
+    this.isPure = true;
 
-    if (symbolTable.currScope.contains(procedureName)) {
-      errors.add(CompilerErrors.SymbolExists(programName, procedureName, symbolTable.get(procedureName).kind, ctx.Id(0).getSymbol()));
+    if (symboltable.currScope.contains(procedureName)) {
+      errors.add(CompilerErrors.SymbolExists(programName, procedureName, symboltable.get(procedureName).kind, ctx.Id(0).getSymbol()));
     }
 
-    symbolTable.add(new Symbol.Function(procedureName, symbolTrace.pop().type));
-    symbolTable.openScope();
+    symboltable.add(new Symbol.Function(procedureName, symboltrace.pop().type));
+    symboltable.openScope();
     hasReturn = false;
   }
 
   @Override
   public void exitParam(ParamContext ctx) {
     final String name = ctx.Id().getText();
-    Symbol.Param sym = new Symbol.Param(name, symbolTrace.pop().type);
+    Symbol.Param sym = new Symbol.Param(name, symboltrace.pop().type);
 
-    if (symbolTable.currScope.contains(name)) {
-      errors.add(CompilerErrors.SymbolExists(programName, name, symbolTable.get(name).kind, ctx.Id().getSymbol()));
+    if (symboltable.currScope.contains(name)) {
+      errors.add(CompilerErrors.SymbolExists(programName, name, symboltable.get(name).kind, ctx.Id().getSymbol()));
     } else {
-      symbolTable.add(sym);
+      symboltable.add(sym);
     }
 
-    symbolTable.get(procedureName, symbolTable.currScope.parent).asFunction().params.add(sym);
+    symboltable.get(procedureName, symboltable.currScope.parent).asFunction().params.add(sym);
   }
 
   @Override
@@ -156,22 +185,24 @@ public class Analysis implements DetailedYaplListener {
     final String endName = ctx.Id(1).getText();
 
     if (!endName.equals(name)) {
-      errors.add(CompilerErrors.EndIdentMismatch(programName, name, endName, symbolTable.get(name).kind, ctx.Id(0).getSymbol()));
+      errors.add(CompilerErrors.EndIdentMismatch(programName, name, endName, symboltable.get(name).kind, ctx.Id(0).getSymbol()));
     }
 
-    symbolTable.closeScope();
+    symboltable.closeScope();
     isLocal = false;
 
-    if (!symbolTable.get(name).type.equals(Symbol.VOID) && !hasReturn) {
+    if (!symboltable.get(name).type.equals(Symbol.VOID) && !hasReturn) {
       errors.add(CompilerErrors.MissingReturn(programName, name, ctx.block().stop));
     }
 
+    symboltable.get(name).asFunction().isPure = isPure;
     this.procedureName = Symbol.UNDEFINED;
+    this.isPure = true;
   }
 
   @Override
   public void enterBlock(BlockContext ctx) {
-    symbolTable.openScope();
+    symboltable.openScope();
     if (ctx.getParent() instanceof ProcedureContext) {
       isLocal = true;
     }
@@ -193,33 +224,38 @@ public class Analysis implements DetailedYaplListener {
 
   @Override
   public void exitBlock(BlockContext ctx) {
-    symbolTable.closeScope();
+    symboltable.closeScope();
   }
 
   @Override
   public void exitWriteStatement(WriteStatementContext ctx) {
-
+    this.isPure = false;
   }
 
   @Override
   public void exitReturnStatement(ReturnStatementContext ctx) {
     this.hasReturn = true;
 
-    if (procedureName == Symbol.UNDEFINED && ctx.expression() != null) {
+    // inside the main code
+    if (procedureName.equals(Symbol.UNDEFINED) && ctx.expression() != null) {
       errors.add( CompilerErrors.IllegalRetValMain(programName, ctx.expression().start) );
     }
-    else if (procedureName != Symbol.UNDEFINED && ctx.expression() != null) {
-      final Symbol returnSym = symbolTrace.pop();
+    // inside a function, return has an expression
+    else if (!procedureName.equals(Symbol.UNDEFINED) && ctx.expression() != null) {
+      final Symbol returnSym = symboltrace.pop();
       
-      if (symbolTable.get(procedureName).type.equals(Symbol.VOID)) {
+      // function has resturn type void
+      if (symboltable.get(procedureName).type.equals(Symbol.VOID)) {
         errors.add( CompilerErrors.IllegalRetValProc(programName, procedureName, ctx.expression().start) );
       }
-      else if (!returnSym.type.equals(symbolTable.get(procedureName).type) && !returnSym.isError()) {
+      // return type and expression type do not match
+      else if (!returnSym.type.equals(symboltable.get(procedureName).type) && !returnSym.isError()) {
         Token token = (ctx.expression() != null) ? ctx.expression().start : ctx.stop;
         errors.add( CompilerErrors.InvalidReturnType(programName, procedureName, token) );
       }
     }
-    else if (ctx.expression() == null && procedureName != Symbol.UNDEFINED && !symbolTable.get(procedureName).type.equals(Symbol.VOID)) {
+    // inside a function, return has no expression, function has a return type other than void
+    else if (ctx.expression() == null && !procedureName.equals(Symbol.UNDEFINED) && !symboltable.get(procedureName).type.equals(Symbol.VOID)) {
       Token token = (ctx.expression() != null) ? ctx.expression().start : ctx.stop;
       errors.add( CompilerErrors.InvalidReturnType(programName, procedureName, token) );
     }
@@ -227,8 +263,8 @@ public class Analysis implements DetailedYaplListener {
 
   @Override
   public void exitAssignment(AssignmentContext ctx) {
-    final Symbol rhs = symbolTrace.pop();
-    final Symbol lhs = symbolTrace.pop();
+    final Symbol rhs = symboltrace.pop();
+    final Symbol lhs = symboltrace.pop();
 
     if (!lhs.isError() && !rhs.isError() && !lhs.type.equals(rhs.type)) {
       errors.add( CompilerErrors.TypeMismatchAssign(programName, ctx.op) );
@@ -237,7 +273,7 @@ public class Analysis implements DetailedYaplListener {
 
   @Override
   public void exitIfStatement(IfStatementContext ctx) {
-    Symbol sym = symbolTrace.pop();
+    Symbol sym = symboltrace.pop();
 
     if (!sym.isError() && !sym.type.equals(Symbol.BOOL)) {
       errors.add( CompilerErrors.CondNotBool(programName, ctx.expression().start) );
@@ -246,7 +282,7 @@ public class Analysis implements DetailedYaplListener {
 
   @Override
   public void exitWhileStatement(WhileStatementContext ctx) {
-    Symbol sym = symbolTrace.pop();
+    Symbol sym = symboltrace.pop();
 
     if (!sym.isError() && !sym.type.equals(Symbol.BOOL)) {
       errors.add( CompilerErrors.CondNotBool(programName, ctx.expression().start) );
@@ -255,65 +291,235 @@ public class Analysis implements DetailedYaplListener {
 
   @Override
   public void exitUnaryExpr(UnaryExprContext ctx) {
-    final Symbol sym = symbolTrace.peek();
+    final Symbol sym = symboltrace.peek();
 
     if (ctx.sign != null && !sym.isError() && !sym.type.equals(Symbol.INT)) {
       errors.add( CompilerErrors.IllegalOp1Type(programName, ctx.sign.getText(), ctx.sign) );
-      symbolTrace.pop();
-      symbolTrace.push( new Symbol.Error() );
+      symboltrace.pop();
+      symboltrace.push( new Symbol.Error() );
+    }
+
+    if (ctx.sign != null && sym.isConst()) {
+      Symbol.Const csym = sym.asConst();
+
+      if (!csym.isExpression()) {
+        symboltrace.pop();
+        final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
+        csym = new Symbol.Expression(exprName, csym.type, csym.value);
+        symboltrace.push(csym);
+      }
+
+
+      if(!(csym.value.startsWith("-") || csym.value.startsWith("+"))) {
+        csym.value = ctx.sign.getText() + csym.value;
+      }
+      else if (csym.value.charAt(0) != ctx.sign.getText().charAt(0)) {
+        csym.value = "-" + csym.value.substring(1);
+      }
+      else {
+        csym.value = csym.value.substring(1);
+      }
     }
   }
 
   @Override
   public void exitArithmeticExpr(ArithmeticExprContext ctx) {
-    final Symbol rhs = symbolTrace.pop();
-    final Symbol lhs = symbolTrace.pop();
+    final String op = ctx.op.getText();
+    final Symbol rhs = symboltrace.pop();
+    final Symbol lhs = symboltrace.pop();
 
     if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals(Symbol.INT) && rhs.type.equals(Symbol.INT))) {
       errors.add( CompilerErrors.IllegalOp2Type(programName, ctx.op.getText(), ctx.op) );
-      symbolTrace.push( new Symbol.Error() );
+      symboltrace.push( new Symbol.Error() );
+      return;
     }
 
-    symbolTrace.push( new Symbol.Expression(Symbol.INT) );
+    if (lhs.isConst() && rhs.isConst()) {
+      // remove sub expressions to clean up the symboltable
+      if (lhs.isExpression()) symboltable.remove(lhs.name);
+      if (rhs.isExpression()) symboltable.remove(rhs.name);
+
+      final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
+      Symbol sym = fold(exprName, op, lhs.asConst(), rhs.asConst());
+      symboltrace.push(sym);
+      if (!sym.isError()) symboltable.add(sym);
+    }
+    else {
+      symboltrace.push( new Symbol.Expression(Symbol.INT) );
+    }
   }
 
   @Override
   public void exitComparison(ComparisonContext ctx) {
-    final Symbol rhs = symbolTrace.pop();
-    final Symbol lhs = symbolTrace.pop();
+    final String op = ctx.op.getText();
+    final Symbol rhs = symboltrace.pop();
+    final Symbol lhs = symboltrace.pop();
 
     if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals(Symbol.INT) && rhs.type.equals(Symbol.INT))) {
       errors.add( CompilerErrors.IllegalRelOpType(programName, ctx.op.getText(), ctx.op) );
-      symbolTrace.push( new Symbol.Error() );
+      symboltrace.push( new Symbol.Error() );
+      return;
     }
 
-    symbolTrace.push( new Symbol.Expression(Symbol.BOOL) );
+    if (lhs.isConst() && rhs.isConst()) {
+      // remove sub expressions to clean up the symboltable
+      if (lhs.isExpression()) symboltable.remove(lhs.name);
+      if (rhs.isExpression()) symboltable.remove(rhs.name);
+
+      final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
+      Symbol sym = fold(exprName, op, lhs.asConst(), rhs.asConst());
+      symboltrace.push(sym);
+      if (!sym.isError()) symboltable.add(sym);
+    }
+    else {
+      symboltrace.push( new Symbol.Expression(Symbol.BOOL) );
+    }
   }
 
   @Override
   public void exitEqualityComparison(EqualityComparisonContext ctx) {
-    final Symbol rhs = symbolTrace.pop();
-    final Symbol lhs = symbolTrace.pop();
+    final String op = ctx.op.getText();
+    final Symbol rhs = symboltrace.pop();
+    final Symbol lhs = symboltrace.pop();
 
     if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals(rhs.type))) {
       errors.add( CompilerErrors.IllegalEqualOpType(programName, ctx.op.getText(), ctx.op) );
-      symbolTrace.push( new Symbol.Error() );
+      symboltrace.push( new Symbol.Error() );
+      return;
     }
 
-    symbolTrace.push( new Symbol.Expression(Symbol.BOOL) );
+    if (lhs.isConst() && rhs.isConst()) {
+      // remove sub expressions to clean up the symboltable
+      if (lhs.isExpression()) symboltable.remove(lhs.name);
+      if (rhs.isExpression()) symboltable.remove(rhs.name);
+
+      final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
+      Symbol sym = fold(exprName, op, lhs.asConst(), rhs.asConst());
+      symboltrace.push(sym);
+      if (!sym.isError()) symboltable.add(sym);
+    }
+    else {
+      symboltrace.push( new Symbol.Expression(Symbol.BOOL) );
+    }
   }
 
   @Override
   public void exitBooleanExpr(BooleanExprContext ctx) {
-    final Symbol rhs = symbolTrace.pop();
-    final Symbol lhs = symbolTrace.pop();
+    final String op = ctx.op.getText();
+    final Symbol rhs = symboltrace.pop();
+    final Symbol lhs = symboltrace.pop();
 
     if (!lhs.isError() && !rhs.isError() && !(lhs.type.equals(Symbol.BOOL) && rhs.type.equals(Symbol.BOOL))) {
       errors.add( CompilerErrors.IllegalOp2Type(programName, ctx.op.getText(), ctx.op) );
-      symbolTrace.push( new Symbol.Error() );
+      symboltrace.push( new Symbol.Error() );
+      return;
     }
 
-    symbolTrace.push( new Symbol.Expression(Symbol.BOOL) );
+    if (lhs.isConst() && rhs.isConst()) {
+      // remove sub expressions to clean up the symboltable
+      if (lhs.isExpression()) symboltable.remove(lhs.name);
+      if (rhs.isExpression()) symboltable.remove(rhs.name);
+      
+      final String exprName = Symbol.Expression.nameFor(ctx.hashCode(), ctx.getText());
+      Symbol sym = fold(exprName, op, lhs.asConst(), rhs.asConst());
+      symboltrace.push(sym);
+      if (!sym.isError()) symboltable.add(sym);
+    }
+    else {
+      symboltrace.push( new Symbol.Expression(Symbol.BOOL) );
+    }
+  }
+
+  /**
+   * Creates an expression symbol with the computed value of the expression
+   */
+  protected Symbol fold(String name, String op, Symbol.Const lhs, Symbol.Const rhs) {
+    int ilhs, irhs;
+    boolean blhs, brhs;
+    
+    switch (op) {
+      case "+":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.INT, "" + (ilhs + irhs));
+        
+      case "-":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.INT, "" + (ilhs - irhs));
+        
+      case "*":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.INT, "" + (ilhs * irhs));
+        
+      case "/":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.INT, "" + (ilhs / irhs));
+      
+      case "%":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.INT, "" + (ilhs % irhs));
+      
+      case "==":
+        if (lhs.type.equals(Symbol.INT)) {
+          ilhs = Integer.parseInt(lhs.value);
+          irhs = Integer.parseInt(rhs.value);
+          return new Symbol.Expression(name, Symbol.BOOL, (ilhs == irhs) ? Symbol.TRUE : Symbol.FALSE);
+        }
+        else {
+          blhs = lhs.value.equals(Symbol.TRUE) ? true : false;
+          brhs = rhs.value.equals(Symbol.TRUE) ? true : false;
+          return new Symbol.Expression(name, Symbol.BOOL, (blhs == brhs) ? Symbol.TRUE : Symbol.FALSE);
+        }
+
+      case "!=":
+        if (lhs.type.equals(Symbol.INT)) {
+          ilhs = Integer.parseInt(lhs.value);
+          irhs = Integer.parseInt(rhs.value);
+          return new Symbol.Expression(name, Symbol.BOOL, (ilhs != irhs) ? Symbol.TRUE : Symbol.FALSE);
+        }
+        else {
+          blhs = lhs.value.equals(Symbol.TRUE) ? true : false;
+          brhs = rhs.value.equals(Symbol.TRUE) ? true : false;
+          return new Symbol.Expression(name, Symbol.BOOL, (blhs != brhs) ? Symbol.TRUE : Symbol.FALSE);
+        }
+
+      case "<":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.BOOL, (ilhs < irhs) ? Symbol.TRUE : Symbol.FALSE);
+
+      case ">":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.BOOL, (ilhs > irhs) ? Symbol.TRUE : Symbol.FALSE);
+
+      case "<=":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.BOOL, (ilhs <= irhs) ? Symbol.TRUE : Symbol.FALSE);
+
+      case ">=":
+        ilhs = Integer.parseInt(lhs.value);
+        irhs = Integer.parseInt(rhs.value);
+        return new Symbol.Expression(name, Symbol.BOOL, (ilhs >= irhs) ? Symbol.TRUE : Symbol.FALSE);
+
+      case "And":
+        blhs = lhs.value.equals(Symbol.TRUE) ? true : false;
+        brhs = rhs.value.equals(Symbol.TRUE) ? true : false;
+        return new Symbol.Expression(name, Symbol.BOOL, (blhs && brhs) ? Symbol.TRUE : Symbol.FALSE);
+
+      case "Or":
+        blhs = lhs.value.equals(Symbol.TRUE) ? true : false;
+        brhs = rhs.value.equals(Symbol.TRUE) ? true : false;
+        return new Symbol.Expression(name, Symbol.BOOL, (blhs || brhs) ? Symbol.TRUE : Symbol.FALSE);
+
+      default:
+        return new Symbol.Error();
+    }
   }
 
   @Override
@@ -321,45 +527,47 @@ public class Analysis implements DetailedYaplListener {
     final String fnName = ctx.Id().getText();
     boolean error = false;
 
-    if (!symbolTable.contains(fnName)) {
+    if (!symboltable.contains(fnName)) {
       errors.add( CompilerErrors.IdentNotDecl(programName, fnName, ctx.Id().getSymbol()) );
       error = true;
     }
 
-    if (!symbolTable.get(fnName).isFunction()) {
-      errors.add( CompilerErrors.SymbolIllegalUse(programName, fnName, symbolTable.get(fnName).kind, ctx.Id().getSymbol()) );
+    if (!error && !symboltable.get(fnName).isFunction()) {
+      errors.add( CompilerErrors.SymbolIllegalUse(programName, fnName, symboltable.get(fnName).kind, ctx.Id().getSymbol()) );
       error = true;
     }
 
     if (error) {
       // clean up symboltrace
       for (int i = 0; i < ctx.expression().size(); i++)
-        symbolTrace.pop();
+        symboltrace.pop();
 
-      // expressions should return symbols for the type
+      // expressions should return a symbol for the type checks
       if (ctx.getParent() instanceof PrimaryExprContext)
-        symbolTrace.push( new Symbol.Error() );
+        symboltrace.push( new Symbol.Error() );
+        
       return;
     }
 
-    Symbol.Function fn = symbolTable.get(fnName).asFunction();
+    Symbol.Function fn = symboltable.get(fnName).asFunction();
 
     if (ctx.expression().size() < fn.params.size()) {
       errors.add( CompilerErrors.TooFewArgs(programName, fnName, ctx.stop) );
       
       // clean up symboltrace
       for (int i = 0; i < ctx.expression().size(); i++)
-        symbolTrace.pop();
+        symboltrace.pop();
 
-      // expressions should return symbols for the type
+      // expressions should return a symbol for the type checks
       if (ctx.getParent() instanceof PrimaryExprContext)
-        symbolTrace.push( new Symbol.Error() );
+        symboltrace.push( new Symbol.Error() );
       return;
     }
 
+    // reverse the argument symbols since a stack is LIFO
     Stack<Symbol> args = new Stack<>();
     for (int i = 0; i < ctx.expression().size(); i++)
-      args.push( symbolTrace.pop() );
+      args.push( symboltrace.pop() );
 
     int idx = 0;
     while (args.size() > 0) {
@@ -377,10 +585,13 @@ public class Analysis implements DetailedYaplListener {
       errors.add( CompilerErrors.ProcNotFuncExpr(programName, fnName, ctx.start) );
       error = true;
     }
+
+    fn.uses++;
+    if (!fn.isPure) this.isPure = false;
     
     // expressions should return symbols for the type
     if (ctx.getParent() instanceof PrimaryExprContext)
-      symbolTrace.push( error ? new Symbol.Error() : new Symbol.Expression(fn.type) );
+      symboltrace.push( error ? new Symbol.Error() : new Symbol.Expression(fn.type) );
   }
 
   @Override
@@ -389,7 +600,7 @@ public class Analysis implements DetailedYaplListener {
     String arraySuffix = "";
     
     for (int i = 0; i < ctx.expression().size(); i++) {
-      final Symbol expr = symbolTrace.pop();
+      final Symbol expr = symboltrace.pop();
 
       if (!expr.isError() && !expr.type.equals(Symbol.INT)) {
         errors.add( CompilerErrors.BadArraySelector(programName, ctx.expression(ctx.expression().size() - 1 - i).start) );
@@ -399,25 +610,25 @@ public class Analysis implements DetailedYaplListener {
       arraySuffix += "[]";
     }
 
-    final Symbol baseType = symbolTrace.pop();
+    final Symbol baseType = symboltrace.pop();
     if (ctx.expression().size() == 0 && !baseType.isError() && (baseType.type.equals(Symbol.INT) || baseType.type.equals(Symbol.BOOL))) {
       errors.add( CompilerErrors.InvalidNewType(programName, ctx.baseType().start) );
       error = true;
     }
 
-    symbolTrace.push( error ? new Symbol.Error() : new Symbol.Expression(baseType.type + arraySuffix) );
+    symboltrace.push( error ? new Symbol.Error() : new Symbol.Expression(baseType.type + arraySuffix) );
   }
 
   @Override
   public void exitArrayLength(ArrayLengthContext ctx) {
-    final Symbol id = symbolTrace.pop();
+    final Symbol id = symboltrace.pop();
 
     if (!id.isError() && !id.asVariable().isArray()) {
       errors.add( CompilerErrors.ArrayLenNotArray(programName, ctx.fullIdentifier().start) );
-      symbolTrace.push( new Symbol.Error() );
+      symboltrace.push( new Symbol.Error() );
     }
 
-    symbolTrace.push( new Symbol.Expression(Symbol.INT) );
+    symboltrace.push( new Symbol.Expression(Symbol.INT) );
   }
 
   @Override
@@ -427,71 +638,74 @@ public class Analysis implements DetailedYaplListener {
       FullIdentifierContext fictx = (FullIdentifierContext)ctx;
       final String name = fictx.Id().getText();
 
-      if (!symbolTable.contains(name)) {
+      if (!symboltable.contains(name)) {
         errors.add( CompilerErrors.IdentNotDecl(programName, name, fictx.Id().getSymbol()) );
-        symbolTrace.push( new Symbol.Error() );
+        symboltrace.push( new Symbol.Error() );
         return;
       }
 
       final boolean constAllowed = !(fictx.getParent() instanceof AssignmentContext || fictx.getParent() instanceof ArrayLengthContext);
-      if (!symbolTable.get(name).isVariable() && !(constAllowed && symbolTable.get(name).isConst())) {
-        errors.add( CompilerErrors.SymbolIllegalUse(programName, name, symbolTable.get(name).kind, fictx.Id().getSymbol()) );
-        symbolTrace.push( new Symbol.Error() );
+      if (!symboltable.get(name).isVariable() && !(constAllowed && symboltable.get(name).isConst())) {
+        errors.add( CompilerErrors.SymbolIllegalUse(programName, name, symboltable.get(name).kind, fictx.Id().getSymbol()) );
+        symboltrace.push( new Symbol.Error() );
         return;
       }
 
-      symbolTrace.push( symbolTable.get(name) );
+      if (symboltable.get(name).isVariable() && !symboltable.get(name).asVariable().isLocal)
+        this.isPure = false;
+
+      symboltrace.push( symboltable.get(name) );
     }
-    // selector part of the identifier
+    // (optional) selector part(s) of a full identifier
     else {
       SelectorContext sctx = (SelectorContext)ctx;
 
       // record selector
       if (sctx.Id() != null) {
-        Symbol id = symbolTrace.pop();
+        Symbol id = symboltrace.pop();
 
-        if (!symbolTable.contains(id.type) || !symbolTable.get(id.type).isRecord()) {
+        if (!symboltable.contains(id.type) || !symboltable.get(id.type).isRecord()) {
           errors.add( CompilerErrors.SelectorNotRecord(programName, sctx.start) );
-          symbolTrace.push( new Symbol.Error() );
+          symboltrace.push( new Symbol.Error() );
           return;
         }
   
-        Symbol selId = id.asVariable().selectField(symbolTable, sctx.Id().getText());
+        Symbol selId = id.asVariable().selectField(symboltable, sctx.Id().getText());
   
         if (selId.isError()) {
           errors.add( CompilerErrors.InvalidRecordField(programName, sctx.Id().getText(), id.type, sctx.Id().getSymbol()) );
-          symbolTrace.push( new Symbol.Error() );
+          symboltrace.push( new Symbol.Error() );
           return;
         }
   
-        symbolTrace.push(selId);
+        symboltrace.push(selId);
       }
       // array selector
       else {
-        Symbol expr = symbolTrace.pop();
-        Symbol id = symbolTrace.peek();
+        Symbol expr = symboltrace.pop();
+        Symbol id = symboltrace.peek();
 
         if (!id.isError() && !id.isArray()) {
           errors.add( CompilerErrors.SelectorNotArray(programName, sctx.start) );
-          symbolTrace.pop();
-          symbolTrace.push( new Symbol.Error() );
+          symboltrace.pop();
+          symboltrace.push( new Symbol.Error() );
           return;
         }
   
         if (!expr.isError() && !expr.type.equals(Symbol.INT)) {
           errors.add( CompilerErrors.BadArraySelector(programName, sctx.expression().start) );
-          symbolTrace.pop();
-          symbolTrace.push( new Symbol.Error() );
+          symboltrace.pop();
+          symboltrace.push( new Symbol.Error() );
           return;
         }
   
         if (!expr.isError() && !id.isError()) {
-          symbolTrace.pop();
-          symbolTrace.push( id.asVariable().selectElement() );
+          symboltrace.pop();
+          symboltrace.push( id.asVariable().selectElement() );
         }
         else if (expr.isError()) {
-          symbolTrace.pop();
-          symbolTrace.push( new Symbol.Error() );
+          symboltrace.pop();
+          symboltrace.push( new Symbol.Error() );
         }
       }
     }
@@ -499,9 +713,9 @@ public class Analysis implements DetailedYaplListener {
 
   @Override
   public void exitType(TypeContext ctx) {
-    if (!symbolTrace.peek().isError()) {
-      symbolTrace.pop();
-      symbolTrace.push( new Symbol.Type(ctx.getText()) );
+    if (!symboltrace.peek().isError()) {
+      symboltrace.pop();
+      symboltrace.push( new Symbol.Type(ctx.getText()) );
     }
   }
 
@@ -509,25 +723,25 @@ public class Analysis implements DetailedYaplListener {
   public void exitBaseType(BaseTypeContext ctx) {
     final String type = ctx.getText();
 
-    if (ctx.Id() != null && !symbolTable.contains(type)) {
+    if (ctx.Id() != null && !symboltable.contains(type)) {
       errors.add( CompilerErrors.IdentNotDecl(programName, type, ctx.Id().getSymbol()) );
-      symbolTrace.push( new Symbol.Error() );
+      symboltrace.push( new Symbol.Error() );
     } 
-    else if (ctx.Id() != null && !symbolTable.get(type).isRecord()) {
-      errors.add( CompilerErrors.SymbolIllegalUse(programName, type, symbolTable.get(type).kind, ctx.Id().getSymbol()) );
-      symbolTrace.push( new Symbol.Error() );
+    else if (ctx.Id() != null && !symboltable.get(type).isRecord()) {
+      errors.add( CompilerErrors.SymbolIllegalUse(programName, type, symboltable.get(type).kind, ctx.Id().getSymbol()) );
+      symboltrace.push( new Symbol.Error() );
     } 
     else {
-      symbolTrace.push( new Symbol.Type(type) );
+      symboltrace.push( new Symbol.Type(type) );
     }
   }
 
   @Override
   public void exitLiteral(LiteralContext ctx) {
     if (ctx.Boolean() != null)
-      symbolTrace.push(new Symbol.Expression(Symbol.BOOL, ctx.Boolean().getText()));
+      symboltrace.push(new Symbol.Expression(Symbol.BOOL, ctx.Boolean().getText()));
     else
-      symbolTrace.push(new Symbol.Expression(Symbol.INT, ctx.Number().getText()));
+      symboltrace.push(new Symbol.Expression(Symbol.INT, ctx.Number().getText()));
   }
 
 }
