@@ -60,9 +60,9 @@ Begin
     a := new int[ARRAYLEN];
     init(a);
     Write "Input Array: ";
-    printArray(a);
+    printArray(  a  );
     writeln();
-    quicksort(a, 0, ARRAYLEN-1);
+    quicksort(a, 0, ARRAYLEN - 1);
     Write "Sorted Array: ";
     printArray(a);
 End quicksort.

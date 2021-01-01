@@ -1,19 +1,19 @@
 package stdlib;
 
-import analysis.SymbolTable;
+import information.Symbol;
 
-/**
- * The base class for all {@code StandardLibrary} implementations. 
- * Its methods provide the symbols for the standard library methods and their target code.
- * It does not define the methods the standard library must provide to the yapl programmer to keep that flexible for the future.
- */
-public abstract class StandardLibrary {
-  
-  public final String filename = "StandardLibrary";
-  public final static StandardLibrary instance = null;
-  protected StandardLibrary() { }
+public interface StandardLibrary {
 
-  public abstract void addToSymbolTable(SymbolTable symboltable);
-  public abstract byte[] generate();
+  String getName();
+
+  /**
+   * @return all predefined symbols which are implemented by this standard library.
+   */
+  Symbol[] getPredefinedSymbols();
+
+  /**
+   * @return the generated code implementing all predefined symbols of this standard library.
+   */
+  byte[] generate();
 
 }

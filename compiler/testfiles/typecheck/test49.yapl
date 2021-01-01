@@ -1,5 +1,5 @@
 /* Type check test input.
- * <expected result> ERROR 29 (line 28, column 11)
+ * <expected result> ERROR 29 (line 27, column 11)
  * type mismatch in assignment
  */
 Program test49
@@ -24,6 +24,6 @@ Declare
 Begin
     stat1.count := 100;
     stat1.median := 0;
-    stat2 := stat1;    /* valid */
+    stat2 := stat1;    /* invalid */
     stat3 := stat1;    /* invalid */
 End test49.

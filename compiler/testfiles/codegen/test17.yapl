@@ -1,6 +1,6 @@
-/* CodeGen test input - recursive procedures (Fibbonacci numbers).
+/* recursive procedures (Fibbonacci numbers).
  */
-Program test17
+Program Test17
 
 Procedure int fib(int k)
 Begin
@@ -26,4 +26,4 @@ Begin
 
     Write "--- End test17 ---";
     writeln();
-End test17.
+End Test17.

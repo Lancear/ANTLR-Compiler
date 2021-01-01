@@ -1,4 +1,4 @@
 --- Start test03 ---
 i = 5
-b = True
+b = true
 --- End test03 ---
