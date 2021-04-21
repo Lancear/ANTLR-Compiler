@@ -1,6 +1,8 @@
-/* recursive procedures (Fibonacci numbers).
+/* 
+ * Fibonacci numbers
+ * recursive procedures
  */
-Program Test17
+Program Fibonacci
 
 Procedure int fib(int k)
 Begin
@@ -11,19 +13,11 @@ Begin
 End fib;
 
 Begin
-    Write "--- Start test17 ---";
-    writeln();
-
     Write "fib(2) = ";
     writeint(fib(2));
     Write " (1 expected)"; writeln();
-    Write "fib(5) = ";
-    writeint(fib(5));
-    Write " (5 expected)"; writeln();
+    
     Write "fib(12) = ";
     writeint(fib(12));
     Write " (144 expected)"; writeln();
-
-    Write "--- End test17 ---";
-    writeln();
-End Test17.
+End Fibonacci.

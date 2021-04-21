@@ -1,0 +1,44 @@
+/* CodeGen test input - recursive records.
+ */
+Program test24
+Declare
+    Record List
+        int item;
+        List next;
+    EndRecord;
+
+Procedure void printList(List list)
+Declare
+    List node;
+Begin
+    node := list;
+    While node.item >= 0 Do
+        writeint(node.item);
+        writeln();
+        node := node.next;
+    EndWhile;
+End printList;
+
+Declare
+    List head, previous, current;
+    Const N = 10;
+    int i;
+Begin
+    Write "--- Start test24 ---";
+    writeln();
+    head := new List;
+    head.item := 1;
+    previous := head;
+    i := 2;
+    While i <= N+1 Do
+        current := new List;
+        current.item := i*i;
+        previous.next := current;
+        previous := current;
+        i := i+1;
+	EndWhile;
+	current.item := -1;
+    printList(head);
+    Write "--- End test24 ---";
+    writeln();
+End test24.

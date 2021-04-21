@@ -1,0 +1,25 @@
+Program test00
+
+Declare
+	Const x = False;
+	Const y = 3;
+
+Procedure int square(int x)
+Begin
+  Return y*x;
+End square;
+
+Begin
+	writebool(True == x);
+	writeln();
+	writebool(y + 4 + 12 <= 9 / 8 % (6 - 2));
+	writeln();
+	writebool(-y > 0 Or x == False And True);
+	writeln();
+	writeint(-12 + -(15 - 25) - -y);
+	writeln();
+
+	/* scenario described in potentials, not actually implemented */
+	writeint(1 * 7 - square(13));
+	writeln();
+End test00.
